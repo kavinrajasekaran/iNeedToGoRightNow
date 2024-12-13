@@ -8,7 +8,7 @@ let currentLocationMarker = null;
 let loadedPlaceIds = new Set();
 
 // Minimum zoom level to perform restaurant search
-const MIN_ZOOM_LEVEL = 14;
+const MIN_ZOOM_LEVEL = 13;
 
 // Default Location (San Francisco Bay Area)
 const DEFAULT_LOCATION = { lat: 37.7749, lng: -122.4194 };
@@ -183,7 +183,7 @@ function searchRestaurants() {
     // Check if the current zoom level is sufficient
     if (map.getZoom() < MIN_ZOOM_LEVEL) {
         // Do not perform search if zoomed out too far
-        clearRestaurantMarkers(); // Optionally clear existing markers
+        // Optionally, you can choose to clear markers here if desired
         return;
     }
 
@@ -242,12 +242,6 @@ function createRestaurantMarker(place) {
     // Add the place_id to the set to prevent duplicates
     loadedPlaceIds.add(place.place_id);
 
-    // Before adding the marker, verify the current zoom level
-    if (map.getZoom() < MIN_ZOOM_LEVEL) {
-        // If zoomed out, do not add the marker
-        return;
-    }
-
     const marker = new google.maps.Marker({
         map,
         position: place.geometry.location,
@@ -256,6 +250,9 @@ function createRestaurantMarker(place) {
             url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
         }
     });
+
+    // Initially set the marker's visibility based on current zoom level
+    marker.setVisible(map.getZoom() >= MIN_ZOOM_LEVEL);
 
     // Create an info window for each marker
     marker.addListener("click", () => {
