@@ -3,87 +3,175 @@ let map;
 let service;
 let infowindow;
 let restaurantMarkers = [];
+let pagination = null;
+let currentLocationMarker = null;
+let loadedPlaceIds = new Set();
+
+// Minimum zoom level to perform restaurant search
+const MIN_ZOOM_LEVEL = 14;
+
+// Default Location (San Francisco Bay Area)
+const DEFAULT_LOCATION = { lat: 37.7749, lng: -122.4194 };
 
 // Initialize and add the map
 function initMap() {
-    // Location of Uluru
-    const uluru = { lat: -25.363, lng: 131.044 };
+    // Attempt to get the user's current location
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                initializeMap(userLocation);
+            },
+            (error) => {
+                console.warn(`Geolocation failed: ${error.message}. Using default location.`);
+                initializeMap(DEFAULT_LOCATION);
+            }
+        );
+    } else {
+        // Browser doesn't support Geolocation
+        alert('Error: Your browser doesn\'t support geolocation. Using default location.');
+        initializeMap(DEFAULT_LOCATION);
+    }
+}
 
-    // Create the map centered on Uluru
+// Function to initialize the map with a given location
+function initializeMap(location) {
+    // Create the map centered on the specified location
     map = new google.maps.Map(document.getElementById("map"), {
-        center: uluru,
+        center: location,
         zoom: 14,
+        streetViewControl: false, // Remove street view control
     });
 
     // Create an InfoWindow instance
     infowindow = new google.maps.InfoWindow();
 
-    // Add a marker for Uluru
-    const uluruMarker = new google.maps.Marker({
-        position: uluru,
-        map: map,
-        title: "Uluru",
-        icon: {
-            url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
-        }
-    });
+    // Add a marker for the current location
+    addCurrentLocationMarker(location);
 
-    uluruMarker.addListener("click", () => {
-        const content = `
-            <div class="info-window">
-                <h2>Uluru</h2>
-                <p>
-                    <b>Uluru</b>, also referred to as <b>Ayers Rock</b>, is a large
-                    sandstone rock formation in the southern part of the
-                    Northern Territory, central Australia. It lies 335&#160;km (208&#160;mi)
-                    southwest of the nearest large town, Alice Springs; 450&#160;km
-                    (280&#160;mi) by road. Kata Tjuta and Uluru are the two major
-                    features of the Uluru-Kata Tjuta National Park. Uluru is
-                    sacred to the Pitjantjatjara and Yankunytjatjara, the
-                    Aboriginal people of the area. It has many springs, waterholes,
-                    rock caves, and ancient paintings. Uluru is listed as a World
-                    Heritage Site.
-                </p>
-                <p>
-                    Attribution: Uluru,
-                    <a href="https://en.wikipedia.org/wiki/Uluru" target="_blank">
-                        https://en.wikipedia.org/wiki/Uluru
-                    </a>
-                    (last visited June 22, 2009).
-                </p>
-            </div>`;
-        infowindow.setContent(content);
-        infowindow.open(map, uluruMarker);
-    });
-
-    // Setup POI control button
+    // Setup POI control buttons
     setupPOIControls();
+
+    // Perform an initial restaurant search
+    searchRestaurants();
+
+    // Add event listener to search for restaurants when the map becomes idle after movement
+    map.addListener("idle", searchRestaurants);
 }
 
-// Setup POI Control Button
+// Setup POI Control Buttons
 function setupPOIControls() {
     const poiControlsDiv = document.createElement("div");
     poiControlsDiv.id = "poiControls";
     poiControlsDiv.innerHTML = `
         <button id="searchRestaurants">Search Restaurants</button>
+        <button id="myLocation">My Location</button>
     `;
     document.body.appendChild(poiControlsDiv);
 
-    // Add event listener for the button
+    // Add event listeners for the buttons
     document.getElementById("searchRestaurants").addEventListener("click", searchRestaurants);
+    document.getElementById("myLocation").addEventListener("click", getMyLocation);
+}
+
+// Function to get the user's current location and center the map
+function getMyLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                map.setCenter(userLocation);
+                map.setZoom(14);
+
+                // Update the current location marker
+                addCurrentLocationMarker(userLocation);
+            },
+            (error) => {
+                alert('Error: The Geolocation service failed or was denied.');
+            }
+        );
+    } else {
+        // Browser doesn't support Geolocation
+        alert('Error: Your browser doesn\'t support geolocation.');
+    }
+}
+
+// Function to add or update the current location marker
+function addCurrentLocationMarker(location) {
+    // Remove existing marker if it exists
+    if (currentLocationMarker) {
+        currentLocationMarker.setMap(null);
+    }
+
+    // Define the custom icon for current location
+    const currentLocationIcon = {
+        path: google.maps.SymbolPath.CIRCLE,
+        fillColor: '#4285F4',
+        fillOpacity: 0.4,
+        scale: 10,
+        strokeColor: '#4285F4',
+        strokeWeight: 2
+    };
+
+    // Add a marker for the current location
+    currentLocationMarker = new google.maps.Marker({
+        position: location,
+        map: map,
+        title: "My Location",
+        icon: currentLocationIcon
+    });
+
+    // Optional: Add a pulsating effect using an additional circle
+    const pulsatingCircle = new google.maps.Circle({
+        strokeColor: '#4285F4',
+        strokeOpacity: 0.4,
+        strokeWeight: 2,
+        fillColor: '#4285F4',
+        fillOpacity: 0.15,
+        map,
+        center: location,
+        radius: 30 // Adjust the radius as needed
+    });
+
+    // Remove the pulsating circle when the marker is removed
+    currentLocationMarker.addListener("position_changed", () => {
+        pulsatingCircle.setCenter(currentLocationMarker.getPosition());
+    });
+
+    currentLocationMarker.addListener("map_changed", () => {
+        if (!currentLocationMarker.getMap()) {
+            pulsatingCircle.setMap(null);
+        }
+    });
+
+    // Add an info window for the current location marker
+    currentLocationMarker.addListener("click", () => {
+        const content = `
+            <div class="info-window">
+                <h3>My Location</h3>
+            </div>`;
+        infowindow.setContent(content);
+        infowindow.open(map, currentLocationMarker);
+    });
 }
 
 // Function to search for restaurants using PlacesService
 function searchRestaurants() {
-    // Show loading spinner
-    showLoading(true);
-
-    // Clear existing restaurant markers
-    clearRestaurantMarkers();
+    // Check if the current zoom level is sufficient
+    if (map.getZoom() < MIN_ZOOM_LEVEL) {
+        // Do not perform search if zoomed out too far
+        return;
+    }
 
     const request = {
         location: map.getCenter(),
-        radius: '1500', // in meters
+        radius: '5000', // Increased radius to 5000 meters
         type: ['restaurant']
     };
 
@@ -92,15 +180,21 @@ function searchRestaurants() {
 }
 
 // Callback function for PlacesService.nearbySearch
-function callback(results, status) {
-    // Hide loading spinner
-    showLoading(false);
-
+function callback(results, status, paginationObj) {
     if (status === google.maps.places.PlacesServiceStatus.OK) {
         for (let i = 0; i < results.length; i++) {
             createRestaurantMarker(results[i]);
         }
-    } else {
+
+        if (paginationObj && paginationObj.hasNextPage) {
+            pagination = paginationObj;
+            // Add a timeout to fetch the next page of results
+            setTimeout(() => {
+                pagination.nextPage();
+            }, 2000);
+        }
+    } else if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+        // Only alert for actual errors, not for zero results
         alert('Places service was not successful for the following reason: ' + status);
     }
 }
@@ -108,6 +202,14 @@ function callback(results, status) {
 // Function to create a marker for a restaurant
 function createRestaurantMarker(place) {
     if (!place.geometry || !place.geometry.location) return;
+
+    // Check if the place has already been loaded
+    if (loadedPlaceIds.has(place.place_id)) {
+        return; // Skip if already loaded
+    }
+
+    // Add the place_id to the set to prevent duplicates
+    loadedPlaceIds.add(place.place_id);
 
     const marker = new google.maps.Marker({
         map,
@@ -191,18 +293,7 @@ function clearRestaurantMarkers() {
         restaurantMarkers[i].setMap(null);
     }
     restaurantMarkers = [];
-}
-
-// Function to show or hide the loading spinner
-function showLoading(isLoading) {
-    let loadingDiv = document.getElementById("loading");
-    if (!loadingDiv) {
-        loadingDiv = document.createElement("div");
-        loadingDiv.id = "loading";
-        loadingDiv.innerHTML = `<div class="spinner"></div>`;
-        document.body.appendChild(loadingDiv);
-    }
-    loadingDiv.style.display = isLoading ? "block" : "none";
+    loadedPlaceIds.clear();
 }
 
 // Function to dynamically load the Google Maps API script

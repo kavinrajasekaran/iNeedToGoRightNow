@@ -8,7 +8,7 @@ html, body {
 #map {
     height: 100%;
 }
-/* Style for POI control button */
+/* Style for POI control buttons */
 #poiControls {
     position: absolute;
     top: 10px;
@@ -20,8 +20,10 @@ html, body {
     border: 2px solid #4285F4;
     border-radius: 5px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    display: flex;
+    gap: 10px;
 }
-#searchRestaurants {
+#poiControls button {
     background-color: #4285F4; /* Google Blue */
     color: white;
     border: none;
@@ -30,29 +32,8 @@ html, body {
     cursor: pointer;
     border-radius: 3px;
 }
-#searchRestaurants:hover {
+#poiControls button:hover {
     background-color: #357ae8;
-}
-/* Style for the loading spinner */
-#loading {
-    display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;
-}
-.spinner {
-    border: 8px solid #f3f3f3;
-    border-top: 8px solid #4285F4;
-    border-radius: 50%;
-    width: 60px;
-    height: 60px;
-    animation: spin 1s linear infinite;
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
 /* Optional: Style for the info window content */
 .info-window {
