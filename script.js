@@ -13,6 +13,9 @@ const MIN_ZOOM_LEVEL = 14;
 // Default Location (San Francisco Bay Area)
 const DEFAULT_LOCATION = { lat: 37.7749, lng: -122.4194 };
 
+// Search token to manage asynchronous search relevance
+let searchToken = 0;
+
 // Initialize and add the map
 function initMap() {
     // Attempt to get the user's current location
@@ -59,7 +62,23 @@ function initializeMap(location) {
     searchRestaurants();
 
     // Add event listener to search for restaurants when the map becomes idle after movement
-    map.addListener("idle", searchRestaurants);
+    map.addListener("idle", handleMapIdle);
+}
+
+// Function to handle map's idle event
+function handleMapIdle() {
+    const currentZoom = map.getZoom();
+
+    if (currentZoom >= MIN_ZOOM_LEVEL) {
+        // Show all restaurant markers
+        restaurantMarkers.forEach(marker => marker.setVisible(true));
+
+        // Perform a restaurant search
+        searchRestaurants();
+    } else {
+        // Hide all restaurant markers
+        restaurantMarkers.forEach(marker => marker.setVisible(false));
+    }
 }
 
 // Setup POI Control Buttons
@@ -67,13 +86,11 @@ function setupPOIControls() {
     const poiControlsDiv = document.createElement("div");
     poiControlsDiv.id = "poiControls";
     poiControlsDiv.innerHTML = `
-        <button id="searchRestaurants">Search Restaurants</button>
         <button id="myLocation">My Location</button>
     `;
     document.body.appendChild(poiControlsDiv);
 
     // Add event listeners for the buttons
-    document.getElementById("searchRestaurants").addEventListener("click", searchRestaurants);
     document.getElementById("myLocation").addEventListener("click", getMyLocation);
 }
 
@@ -166,8 +183,12 @@ function searchRestaurants() {
     // Check if the current zoom level is sufficient
     if (map.getZoom() < MIN_ZOOM_LEVEL) {
         // Do not perform search if zoomed out too far
+        clearRestaurantMarkers(); // Optionally clear existing markers
         return;
     }
+
+    // Increment the search token for each new search
+    const currentSearchToken = ++searchToken;
 
     const request = {
         location: map.getCenter(),
@@ -176,11 +197,19 @@ function searchRestaurants() {
     };
 
     service = new google.maps.places.PlacesService(map);
-    service.nearbySearch(request, callback);
+    service.nearbySearch(request, (results, status, paginationObj) => {
+        callback(results, status, paginationObj, currentSearchToken);
+    });
 }
 
 // Callback function for PlacesService.nearbySearch
-function callback(results, status, paginationObj) {
+function callback(results, status, paginationObj, token) {
+    // Verify if the search token matches the current token
+    if (token !== searchToken) {
+        // Outdated search, ignore the results
+        return;
+    }
+
     if (status === google.maps.places.PlacesServiceStatus.OK) {
         for (let i = 0; i < results.length; i++) {
             createRestaurantMarker(results[i]);
@@ -190,12 +219,14 @@ function callback(results, status, paginationObj) {
             pagination = paginationObj;
             // Add a timeout to fetch the next page of results
             setTimeout(() => {
-                pagination.nextPage();
+                if (token === searchToken) { // Ensure token is still valid
+                    pagination.nextPage();
+                }
             }, 2000);
         }
     } else if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
         // Only alert for actual errors, not for zero results
-        alert('Places service was not successful for the following reason: ' + status);
+        console.error('Places service was not successful for the following reason: ' + status);
     }
 }
 
@@ -210,6 +241,12 @@ function createRestaurantMarker(place) {
 
     // Add the place_id to the set to prevent duplicates
     loadedPlaceIds.add(place.place_id);
+
+    // Before adding the marker, verify the current zoom level
+    if (map.getZoom() < MIN_ZOOM_LEVEL) {
+        // If zoomed out, do not add the marker
+        return;
+    }
 
     const marker = new google.maps.Marker({
         map,
@@ -260,26 +297,29 @@ function createRestaurantMarker(place) {
             // Add event listener for the save button
             // Use a timeout to ensure the DOM is updated
             setTimeout(() => {
-                document.getElementById('saveCodeButton').addEventListener('click', () => {
-                    const code = document.getElementById('codeInput').value.trim();
-                    if (code) {
-                        localStorage.setItem(`code_${placeId}`, code);
-                        // Update the info window to display the code
-                        const updatedContent = `
-                            <div class="info-window">
-                                <h3>${place.name}</h3>
-                                <p>${place.vicinity}</p>
-                                ${place.rating ? `<p>Rating: ${place.rating} ⭐</p>` : ''}
-                                <a href="${place.url}" target="_blank">More Info</a>
-                                <hr>
-                                <p><strong>Code:</strong> ${code}</p>
-                            </div>
-                        `;
-                        infowindow.setContent(updatedContent);
-                    } else {
-                        alert('Please enter a code.');
-                    }
-                });
+                const saveButton = document.getElementById('saveCodeButton');
+                if (saveButton) {
+                    saveButton.addEventListener('click', () => {
+                        const code = document.getElementById('codeInput').value.trim();
+                        if (code) {
+                            localStorage.setItem(`code_${placeId}`, code);
+                            // Update the info window to display the code
+                            const updatedContent = `
+                                <div class="info-window">
+                                    <h3>${place.name}</h3>
+                                    <p>${place.vicinity}</p>
+                                    ${place.rating ? `<p>Rating: ${place.rating} ⭐</p>` : ''}
+                                    <a href="${place.url}" target="_blank">More Info</a>
+                                    <hr>
+                                    <p><strong>Code:</strong> ${code}</p>
+                                </div>
+                            `;
+                            infowindow.setContent(updatedContent);
+                        } else {
+                            alert('Please enter a code.');
+                        }
+                    });
+                }
             }, 100);
         }
     });
