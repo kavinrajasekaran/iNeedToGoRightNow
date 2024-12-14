@@ -3,7 +3,7 @@
 let map;
 let service;
 let infowindow;
-let restaurantMarkers = [];
+let bathroomMarkers = [];
 let pagination = null;
 let currentLocationMarker = null;
 let loadedPlaceIds = new Set();
@@ -11,7 +11,7 @@ let loadedPlaceIds = new Set();
 // API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDBNdOp0vtpueqn7jGnt5oKJaQaE5INf68';
 
-// Minimum zoom level to perform restaurant search
+// Minimum zoom level to perform bathroom search
 const MIN_ZOOM_LEVEL = 13;
 
 // Default Location (San Francisco Bay Area)
@@ -62,10 +62,10 @@ function initializeMap(location) {
     // Setup POI control buttons
     setupPOIControls();
 
-    // Perform an initial restaurant search
-    searchRestaurants();
+    // Perform an initial bathroom search
+    searchBathrooms();
 
-    // Add event listener to search for restaurants when the map becomes idle after movement
+    // Add event listener to search for bathrooms when the map becomes idle after movement
     map.addListener("idle", handleMapIdle);
 }
 
@@ -74,8 +74,8 @@ function handleMapIdle() {
     const currentZoom = map.getZoom();
 
     if (currentZoom >= MIN_ZOOM_LEVEL) {
-        // Show all restaurant markers within the current bounds
-        restaurantMarkers.forEach(marker => {
+        // Show all bathroom markers within the current bounds
+        bathroomMarkers.forEach(marker => {
             if (isMarkerInBounds(marker)) {
                 marker.setVisible(true);
             } else {
@@ -83,14 +83,14 @@ function handleMapIdle() {
             }
         });
 
-        // Perform a restaurant search
-        searchRestaurants();
+        // Perform a bathroom search
+        searchBathrooms();
     } else {
-        // Hide all restaurant markers
-        restaurantMarkers.forEach(marker => marker.setVisible(false));
+        // Hide all bathroom markers
+        bathroomMarkers.forEach(marker => marker.setVisible(false));
     }
 
-    // Update the sidebar with the closest restaurants
+    // Update the sidebar with the closest bathrooms
     updateSidebar();
 }
 
@@ -185,8 +185,8 @@ function addCurrentLocationMarker(location) {
     });
 }
 
-// Function to search for restaurants using PlacesService
-function searchRestaurants() {
+// Function to search for bathrooms using PlacesService
+function searchBathrooms() {
     // Check if the current zoom level is sufficient
     if (map.getZoom() < MIN_ZOOM_LEVEL) {
         // Do not perform search if zoomed out too far
@@ -199,7 +199,8 @@ function searchRestaurants() {
     const request = {
         location: map.getCenter(),
         radius: '5000', // Increased radius to 5000 meters
-        type: ['restaurant']
+        type: ['establishment'],
+        keyword: 'bathroom'
     };
 
     service = new google.maps.places.PlacesService(map);
@@ -218,7 +219,7 @@ function callback(results, status, paginationObj, token) {
 
     if (status === google.maps.places.PlacesServiceStatus.OK) {
         for (let i = 0; i < results.length; i++) {
-            createRestaurantMarker(results[i]);
+            createBathroomMarker(results[i]);
         }
 
         if (paginationObj && paginationObj.hasNextPage) {
@@ -239,8 +240,8 @@ function callback(results, status, paginationObj, token) {
     }
 }
 
-// Function to create a marker for a restaurant
-function createRestaurantMarker(place) {
+// Function to create a marker for a bathroom
+function createBathroomMarker(place) {
     if (!place.geometry || !place.geometry.location) return;
 
     // Check if the place has already been loaded
@@ -337,16 +338,16 @@ function createRestaurantMarker(place) {
         }
     });
 
-    restaurantMarkers.push(marker);
+    bathroomMarkers.push(marker);
 }
 
-// Function to clear all restaurant markers from the map
+// Function to clear all bathroom markers from the map
 // Removed to prevent flickering
-// function clearRestaurantMarkers() {
-//     for (let i = 0; i < restaurantMarkers.length; i++) {
-//         restaurantMarkers[i].setMap(null);
+// function clearBathroomMarkers() {
+//     for (let i = 0; i < bathroomMarkers.length; i++) {
+//         bathroomMarkers[i].setMap(null);
 //     }
-//     restaurantMarkers = [];
+//     bathroomMarkers = [];
 //     loadedPlaceIds.clear();
 // }
 
@@ -387,15 +388,15 @@ function isMarkerInBounds(marker) {
     return map.getBounds().contains(marker.getPosition());
 }
 
-// Function to update the sidebar with the closest restaurants and their codes
+// Function to update the sidebar with the closest bathrooms and their codes
 function updateSidebar() {
-    const restaurantList = document.getElementById('restaurantList');
-    restaurantList.innerHTML = ''; // Clear existing list
+    const bathroomList = document.getElementById('bathroomList');
+    bathroomList.innerHTML = ''; // Clear existing list
 
-    if (restaurantMarkers.length === 0) {
+    if (bathroomMarkers.length === 0) {
         const li = document.createElement('li');
-        li.textContent = 'No restaurants found.';
-        restaurantList.appendChild(li);
+        li.textContent = 'No bathrooms found.';
+        bathroomList.appendChild(li);
         return;
     }
 
@@ -403,8 +404,8 @@ function updateSidebar() {
     const centerLat = center.lat();
     const centerLng = center.lng();
 
-    // Gather restaurant data within current bounds
-    const restaurants = restaurantMarkers
+    // Gather bathroom data within current bounds
+    const bathrooms = bathroomMarkers
         .filter(marker => marker.getVisible())
         .map(marker => {
             const place = marker.title;
@@ -423,28 +424,28 @@ function updateSidebar() {
             };
         });
 
-    if (restaurants.length === 0) {
+    if (bathrooms.length === 0) {
         const li = document.createElement('li');
-        li.textContent = 'No restaurants found within the current view.';
-        restaurantList.appendChild(li);
+        li.textContent = 'No bathrooms found within the current view.';
+        bathroomList.appendChild(li);
         return;
     }
 
-    // Sort restaurants by distance
-    restaurants.sort((a, b) => a.distance - b.distance);
+    // Sort bathrooms by distance
+    bathrooms.sort((a, b) => a.distance - b.distance);
 
     // Populate the sidebar with the sorted list
-    restaurants.forEach(restaurant => {
+    bathrooms.forEach(bathroom => {
         const li = document.createElement('li');
 
         const name = document.createElement('h3');
-        name.textContent = restaurant.name;
+        name.textContent = bathroom.name;
 
         const code = document.createElement('p');
-        code.innerHTML = `<strong>Code:</strong> <span class="code">${restaurant.code}</span>`;
+        code.innerHTML = `<strong>Code:</strong> <span class="code">${bathroom.code}</span>`;
 
         li.appendChild(name);
         li.appendChild(code);
-        restaurantList.appendChild(li);
+        bathroomList.appendChild(li);
     });
 }
