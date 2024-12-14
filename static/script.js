@@ -17,9 +17,6 @@ const MIN_ZOOM_LEVEL = 13;
 // Default Location (San Francisco Bay Area)
 const DEFAULT_LOCATION = { lat: 37.7749, lng: -122.4194 };
 
-// Search token to manage asynchronous search relevance
-let searchToken = 0;
-
 // Initialize and add the map
 function initMap() {
     // Attempt to get the user's current location
@@ -193,30 +190,21 @@ function searchBathrooms() {
         return;
     }
 
-    // Increment the search token for each new search
-    const currentSearchToken = ++searchToken;
-
     const request = {
         location: map.getCenter(),
-        radius: '5000', // Increased radius to 5000 meters
+        radius: '5000',
         type: ['establishment'],
         keyword: 'bathroom'
     };
 
     service = new google.maps.places.PlacesService(map);
     service.nearbySearch(request, (results, status, paginationObj) => {
-        callback(results, status, paginationObj, currentSearchToken);
+        callback(results, status, paginationObj);
     });
 }
 
 // Callback function for PlacesService.nearbySearch
-function callback(results, status, paginationObj, token) {
-    // Verify if the search token matches the current token
-    if (token !== searchToken) {
-        // Outdated search, ignore the results
-        return;
-    }
-
+function callback(results, status, paginationObj) {
     if (status === google.maps.places.PlacesServiceStatus.OK) {
         for (let i = 0; i < results.length; i++) {
             createBathroomMarker(results[i]);
@@ -226,10 +214,8 @@ function callback(results, status, paginationObj, token) {
             pagination = paginationObj;
             // Add a timeout to fetch the next page of results
             setTimeout(() => {
-                if (token === searchToken) { // Ensure token is still valid
-                    pagination.nextPage();
-                }
-            }, 2000);
+                pagination.nextPage();
+            }, 10);
         }
 
         // After adding markers, update the sidebar
@@ -340,16 +326,6 @@ function createBathroomMarker(place) {
 
     bathroomMarkers.push(marker);
 }
-
-// Function to clear all bathroom markers from the map
-// Removed to prevent flickering
-// function clearBathroomMarkers() {
-//     for (let i = 0; i < bathroomMarkers.length; i++) {
-//         bathroomMarkers[i].setMap(null);
-//     }
-//     bathroomMarkers = [];
-//     loadedPlaceIds.clear();
-// }
 
 // Function to dynamically load the Google Maps API script
 function loadGoogleMapsScript() {
