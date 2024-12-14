@@ -1,5 +1,4 @@
 // static/script.js
-
 let map;
 let service;
 let infowindow;
@@ -196,7 +195,7 @@ function searchBathrooms() {
     const request = {
         location: map.getCenter(),
         radius: '5000',
-        type: ['establishment'],
+        type: 'establishment',
         keyword: 'bathroom'
     };
 
