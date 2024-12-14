@@ -1,4 +1,5 @@
 // static/script.js
+
 let map;
 let service;
 let infowindow;

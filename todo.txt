@@ -1,5 +1,5 @@
 [x] get user location
-[ ] add a sidebar and show the closest restaurants
-[ ] database prolly sqlite to store the things
+[x] add a sidebar and show the closest restaurants
+[x] database prolly sqlite to store the things
 [ ] rate restaurant codes, show comments, and show highest rated codes
 [ ] signup with password salting hashing
