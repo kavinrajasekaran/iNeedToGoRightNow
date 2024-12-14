@@ -68,6 +68,15 @@ function initializeMap(location) {
 
 // Function to handle map's idle event
 function handleMapIdle() {
+    // Show or hide the bathrooms as needed
+    hideShowBathrooms();
+    // Update the sidebar with the closest bathrooms
+    updateSidebar();
+    // Perform a bathroom search
+    searchBathrooms();
+}
+
+function hideShowBathrooms() {
     const currentZoom = map.getZoom();
 
     if (currentZoom >= MIN_ZOOM_LEVEL) {
@@ -79,16 +88,10 @@ function handleMapIdle() {
                 marker.setVisible(false);
             }
         });
-
-        // Perform a bathroom search
-        searchBathrooms();
     } else {
         // Hide all bathroom markers
         bathroomMarkers.forEach(marker => marker.setVisible(false));
     }
-
-    // Update the sidebar with the closest bathrooms
-    updateSidebar();
 }
 
 // Setup POI Control Buttons
@@ -217,13 +220,11 @@ function callback(results, status, paginationObj) {
                 pagination.nextPage();
             }, 10);
         }
-
-        // After adding markers, update the sidebar
-        updateSidebar();
     } else if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
         // Only alert for actual errors, not for zero results
         console.error('Places service was not successful for the following reason: ' + status);
     }
+    updateSidebar();
 }
 
 // Function to create a marker for a bathroom
@@ -366,6 +367,7 @@ function isMarkerInBounds(marker) {
 
 // Function to update the sidebar with the closest bathrooms and their codes
 function updateSidebar() {
+    hideShowBathrooms();
     const bathroomList = document.getElementById('bathroomList');
     bathroomList.innerHTML = ''; // Clear existing list
 
