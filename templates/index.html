@@ -1,0 +1,21 @@
+<!-- templates/index.html -->
+<!doctype html>
+<html>
+    <head>
+        <title>Dynamic Restaurant Search Map with Code Input</title>
+        <meta charset="utf-8">
+        <!-- Link to the external CSS file -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    </head>
+    <body>
+        <!-- POI Control Buttons -->
+        <div id="poiControls">
+            <button id="myLocation">My Location</button>
+        </div>
+        
+        <!-- Map Container -->
+        <div id="map"></div>
+        <!-- Main JavaScript File -->
+        <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
+    </body>
+</html>

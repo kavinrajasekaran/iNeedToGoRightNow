@@ -1,4 +1,4 @@
-// script.js
+// static/js/script.js
 let map;
 let service;
 let infowindow;
@@ -6,6 +6,9 @@ let restaurantMarkers = [];
 let pagination = null;
 let currentLocationMarker = null;
 let loadedPlaceIds = new Set();
+
+// API key
+const GOOGLE_MAPS_API_KEY = 'AIzaSyDBNdOp0vtpueqn7jGnt5oKJaQaE5INf68';
 
 // Minimum zoom level to perform restaurant search
 const MIN_ZOOM_LEVEL = 13;
@@ -83,14 +86,8 @@ function handleMapIdle() {
 
 // Setup POI Control Buttons
 function setupPOIControls() {
-    const poiControlsDiv = document.createElement("div");
-    poiControlsDiv.id = "poiControls";
-    poiControlsDiv.innerHTML = `
-        <button id="myLocation">My Location</button>
-    `;
-    document.body.appendChild(poiControlsDiv);
-
-    // Add event listeners for the buttons
+    const poiControlsDiv = document.getElementById("poiControls");
+    // Event listener for the "My Location" button
     document.getElementById("myLocation").addEventListener("click", getMyLocation);
 }
 
@@ -183,7 +180,6 @@ function searchRestaurants() {
     // Check if the current zoom level is sufficient
     if (map.getZoom() < MIN_ZOOM_LEVEL) {
         // Do not perform search if zoomed out too far
-        // Optionally, you can choose to clear markers here if desired
         return;
     }
 
