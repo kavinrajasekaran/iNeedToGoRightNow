@@ -1,14 +1,69 @@
 /* static/styles.css */
-/* Ensure the map fills the entire viewport */
+
+/* Ensure the map and sidebar fill the entire viewport */
 html, body {
     height: 100%;
     margin: 0;
     padding: 0;
+    font-family: Arial, sans-serif;
 }
-#map {
+
+/* Container to hold map and sidebar */
+.container {
+    display: flex;
     height: 100%;
 }
-/* Style for POI control buttons */
+
+/* Map Container Styling */
+#mapContainer {
+    width: 50%; /* Left half */
+    position: relative;
+}
+
+/* Sidebar Styling */
+#sidebar {
+    width: 50%; /* Right half */
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    padding: 20px;
+    box-sizing: border-box;
+    border-left: 1px solid #ddd;
+}
+
+#sidebar h2 {
+    margin-top: 0;
+    text-align: center;
+}
+
+#restaurantList {
+    list-style-type: none;
+    padding: 0;
+}
+
+#restaurantList li {
+    background-color: #fff;
+    margin-bottom: 10px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+#restaurantList li h3 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+}
+
+#restaurantList li p {
+    margin: 5px 0;
+    color: #555;
+}
+
+#restaurantList li .code {
+    font-weight: bold;
+    color: #4285F4;
+}
+
+/* POI Control Buttons */
 #poiControls {
     position: absolute;
     top: 10px;
@@ -23,6 +78,7 @@ html, body {
     display: flex;
     gap: 10px;
 }
+
 #poiControls button {
     background-color: #4285F4; /* Google Blue */
     color: white;
@@ -32,22 +88,33 @@ html, body {
     cursor: pointer;
     border-radius: 3px;
 }
+
 #poiControls button:hover {
     background-color: #357ae8;
 }
+
+/* Map Styling */
+#map {
+    height: 100%;
+    width: 100%;
+}
+
 /* Optional: Style for the info window content */
 .info-window {
     max-width: 250px;
 }
+
 .info-window h3 {
     margin-top: 0;
 }
+
 .info-window input[type="text"] {
     width: 100%;
     padding: 5px;
     margin-top: 5px;
     box-sizing: border-box;
 }
+
 .info-window button {
     margin-top: 5px;
     padding: 5px 10px;
@@ -57,6 +124,7 @@ html, body {
     border-radius: 3px;
     cursor: pointer;
 }
+
 .info-window button:hover {
     background-color: #357ae8;
 }

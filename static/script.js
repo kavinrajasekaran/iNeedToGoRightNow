@@ -1,4 +1,5 @@
 // static/script.js
+
 let map;
 let service;
 let infowindow;
@@ -73,8 +74,14 @@ function handleMapIdle() {
     const currentZoom = map.getZoom();
 
     if (currentZoom >= MIN_ZOOM_LEVEL) {
-        // Show all restaurant markers
-        restaurantMarkers.forEach(marker => marker.setVisible(true));
+        // Show all restaurant markers within the current bounds
+        restaurantMarkers.forEach(marker => {
+            if (isMarkerInBounds(marker)) {
+                marker.setVisible(true);
+            } else {
+                marker.setVisible(false);
+            }
+        });
 
         // Perform a restaurant search
         searchRestaurants();
@@ -82,6 +89,9 @@ function handleMapIdle() {
         // Hide all restaurant markers
         restaurantMarkers.forEach(marker => marker.setVisible(false));
     }
+
+    // Update the sidebar with the closest restaurants
+    updateSidebar();
 }
 
 // Setup POI Control Buttons
@@ -220,6 +230,9 @@ function callback(results, status, paginationObj, token) {
                 }
             }, 2000);
         }
+
+        // After adding markers, update the sidebar
+        updateSidebar();
     } else if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
         // Only alert for actual errors, not for zero results
         console.error('Places service was not successful for the following reason: ' + status);
@@ -246,6 +259,9 @@ function createRestaurantMarker(place) {
             url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
         }
     });
+
+    // Attach the place_id to the marker for later reference
+    marker.place_id = place.place_id;
 
     // Initially set the marker's visibility based on current zoom level
     marker.setVisible(map.getZoom() >= MIN_ZOOM_LEVEL);
@@ -308,6 +324,10 @@ function createRestaurantMarker(place) {
                                 </div>
                             `;
                             infowindow.setContent(updatedContent);
+                            infowindow.open(map, marker);
+                            
+                            // Update the sidebar
+                            updateSidebar();
                         } else {
                             alert('Please enter a code.');
                         }
@@ -321,13 +341,14 @@ function createRestaurantMarker(place) {
 }
 
 // Function to clear all restaurant markers from the map
-function clearRestaurantMarkers() {
-    for (let i = 0; i < restaurantMarkers.length; i++) {
-        restaurantMarkers[i].setMap(null);
-    }
-    restaurantMarkers = [];
-    loadedPlaceIds.clear();
-}
+// Removed to prevent flickering
+// function clearRestaurantMarkers() {
+//     for (let i = 0; i < restaurantMarkers.length; i++) {
+//         restaurantMarkers[i].setMap(null);
+//     }
+//     restaurantMarkers = [];
+//     loadedPlaceIds.clear();
+// }
 
 // Function to dynamically load the Google Maps API script
 function loadGoogleMapsScript() {
@@ -343,3 +364,87 @@ window.initMap = initMap;
 
 // Load the Google Maps script after defining initMap
 loadGoogleMapsScript();
+
+// Function to compute the distance between two points in meters
+function computeDistance(lat1, lng1, lat2, lng2) {
+    function toRad(x) {
+        return x * Math.PI / 180;
+    }
+
+    const R = 6378137; // Earth’s mean radius in meters
+    const dLat = toRad(lat2 - lat1);
+    const dLong = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLong / 2) * Math.sin(dLong / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c;
+    return d; // returns the distance in meters
+}
+
+// Function to check if a marker is within the current map bounds
+function isMarkerInBounds(marker) {
+    return map.getBounds().contains(marker.getPosition());
+}
+
+// Function to update the sidebar with the closest restaurants and their codes
+function updateSidebar() {
+    const restaurantList = document.getElementById('restaurantList');
+    restaurantList.innerHTML = ''; // Clear existing list
+
+    if (restaurantMarkers.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'No restaurants found.';
+        restaurantList.appendChild(li);
+        return;
+    }
+
+    const center = map.getCenter();
+    const centerLat = center.lat();
+    const centerLng = center.lng();
+
+    // Gather restaurant data within current bounds
+    const restaurants = restaurantMarkers
+        .filter(marker => marker.getVisible())
+        .map(marker => {
+            const place = marker.title;
+            const position = marker.getPosition();
+            const distance = computeDistance(centerLat, centerLng, position.lat(), position.lng());
+
+            // Retrieve code from localStorage
+            const code = localStorage.getItem(`code_${marker.place_id}`) || 'N/A';
+
+            return {
+                name: marker.title,
+                vicinity: '', // Optional: You can add vicinity if stored
+                code: code,
+                distance: distance,
+                marker: marker
+            };
+        });
+
+    if (restaurants.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'No restaurants found within the current view.';
+        restaurantList.appendChild(li);
+        return;
+    }
+
+    // Sort restaurants by distance
+    restaurants.sort((a, b) => a.distance - b.distance);
+
+    // Populate the sidebar with the sorted list
+    restaurants.forEach(restaurant => {
+        const li = document.createElement('li');
+
+        const name = document.createElement('h3');
+        name.textContent = restaurant.name;
+
+        const code = document.createElement('p');
+        code.innerHTML = `<strong>Code:</strong> <span class="code">${restaurant.code}</span>`;
+
+        li.appendChild(name);
+        li.appendChild(code);
+        restaurantList.appendChild(li);
+    });
+}
