@@ -1,13 +1,20 @@
 # init_db.py
 
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import Base, User, Bathroom, Comment, BathroomCode
 from datetime import datetime
+from app import hash_password
 
 def init_db():
+    # Delete the existing database if it exists
+    db_file = 'bathroom.db'
+    if os.path.exists(db_file):
+        os.remove(db_file)
+    
     # Create a SQLite database named 'bathroom.db'
-    engine = create_engine('sqlite:///bathroom.db', echo=True)
+    engine = create_engine('sqlite:///bathroom.db', echo=False)
     
     # Create all tables defined in models.py
     Base.metadata.create_all(engine)
@@ -21,11 +28,11 @@ def init_db():
     try:
         # Create test Users
         users = [
-            User(username='alice', password='hashed_password1'),
-            User(username='bob', password='hashed_password2'),
-            User(username='charlie', password='hashed_password3'),
-            User(username='diana', password='hashed_password4'),
-            User(username='eve', password='hashed_password5'),
+            User(username='alice', password=hash_password('alice')),
+            User(username='bob', password=hash_password('bob')),
+            User(username='charlie', password=hash_password('charlie')),
+            User(username='diana', password=hash_password('diana')),
+            User(username='eve', password=hash_password('eve')),
         ]
 
         # Create test Bathrooms

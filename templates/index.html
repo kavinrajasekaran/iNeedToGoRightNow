@@ -1,19 +1,13 @@
 <!-- templates/index.html -->
 
-<!doctype html>
-<html>
-    <head>
-        <title>iNeedToGoRightNow</title>
-        <meta charset="utf-8">
-        <!-- Link to the external CSS file -->
-        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    </head>
-    <body>
-        <div class="container">
-            {% include 'map.html' %}
-            {% include 'sidebar.html' %}
-        </div>
-        <!-- Main JavaScript File -->
-        <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
-    </body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    {% include 'map.html' %}
+    {% include 'sidebar.html' %}
+</div>
+
+<!-- Main JavaScript File -->
+<script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
+{% endblock %}
