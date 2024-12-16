@@ -67,16 +67,6 @@ function initializeMap(location) {
     map.addListener("idle", handleMapIdle);
 }
 
-// Function to handle map's idle event
-function handleMapIdle() {
-    // Show or hide the bathrooms as needed
-    hideShowBathrooms();
-    // Update the sidebar with the closest bathrooms
-    updateSidebar();
-    // Perform a bathroom search
-    searchBathrooms();
-}
-
 function hideShowBathrooms() {
     const currentZoom = map.getZoom();
 
@@ -95,7 +85,17 @@ function hideShowBathrooms() {
     }
 }
 
-// Setup POI Control Buttons
+// Function to handle map's idle event
+function handleMapIdle() {
+    // Show or hide the bathrooms as needed
+    hideShowBathrooms();
+    // Update the sidebar with the closest bathrooms
+    updateSidebar();
+    // Perform a bathroom search
+    searchBathrooms();
+}
+
+ // Setup POI Control Buttons
 function setupPOIControls() {
     const poiControlsDiv = document.getElementById("poiControls");
     // Event listener for the "My Location" button
@@ -263,59 +263,86 @@ function createBathroomMarker(place) {
         selectedMarker = marker; 
         updateSidebar(); // Refresh sidebar to show selected at top with expanded view
 
-        // Show info window if code is known
-        const placeId = marker.place_id;
-        const savedCode = localStorage.getItem(`code_${placeId}`);
+        // Fetch code from backend
+        fetch(`/api/get_code/${marker.place_id}`)
+            .then(response => response.json())
+            .then(data => {
+                const savedCode = data.code;
 
-        let content = `
-            <div class="info-window">
-                <h3>${marker.title}</h3>
-                <p>${marker.vicinity}</p>
-                ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
-                ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
-                <hr>
-        `;
+                let content = `
+                    <div class="info-window">
+                        <h3>${marker.title}</h3>
+                        <p>${marker.vicinity}</p>
+                        ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
+                        ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
+                        <hr>
+                `;
 
-        if (savedCode) {
-            content += `<p><strong>Code:</strong> ${savedCode}</p></div>`;
-        } else {
-            content += `
-                <label for="codeInput">Enter Code:</label><br>
-                <input type="text" id="codeInput" placeholder="Enter code here"><br>
-                <button id="saveCodeButton">Save Code</button>
-            </div>`;
-        }
+                if (savedCode) {
+                    content += `<p><strong>Code:</strong> ${savedCode}</p></div>`;
+                } else {
+                    content += `
+                        <label for="codeInput">Enter Code:</label><br>
+                        <input type="text" id="codeInput" placeholder="Enter code here"><br>
+                        <button id="saveCodeButton">Save Code</button>
+                    </div>`;
+                }
 
-        infowindow.setContent(content);
-        infowindow.open(map, marker);
+                infowindow.setContent(content);
+                infowindow.open(map, marker);
 
-        // Add event listener for saving code in the info window
-        setTimeout(() => {
-            const saveButton = document.getElementById('saveCodeButton');
-            if (saveButton) {
-                saveButton.addEventListener('click', () => {
-                    const code = document.getElementById('codeInput').value.trim();
-                    if (code) {
-                        localStorage.setItem(`code_${placeId}`, code);
-                        // Update info window
-                        const updatedContent = `
-                            <div class="info-window">
-                                <h3>${marker.title}</h3>
-                                <p>${marker.vicinity}</p>
-                                ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
-                                ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
-                                <hr>
-                                <p><strong>Code:</strong> ${code}</p>
-                            </div>
-                        `;
-                        infowindow.setContent(updatedContent);
-                        updateSidebar(); // Update sidebar as well
-                    } else {
-                        alert('Please enter a code.');
+                // Add event listener for saving code in the info window
+                setTimeout(() => {
+                    const saveButton = document.getElementById('saveCodeButton');
+                    if (saveButton) {
+                        saveButton.addEventListener('click', () => {
+                            const code = document.getElementById('codeInput').value.trim();
+                            if (code) {
+                                // Send POST request to save code
+                                fetch('/api/save_code', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        place_id: marker.place_id,
+                                        code: code
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        // Update info window with the new code
+                                        const updatedContent = `
+                                            <div class="info-window">
+                                                <h3>${marker.title}</h3>
+                                                <p>${marker.vicinity}</p>
+                                                ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
+                                                ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
+                                                <hr>
+                                                <p><strong>Code:</strong> ${code}</p>
+                                            </div>
+                                        `;
+                                        infowindow.setContent(updatedContent);
+                                        updateSidebar(); // Update sidebar as well
+                                    } else {
+                                        alert('Failed to save code.');
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error saving code:', error);
+                                    alert('An error occurred while saving the code.');
+                                });
+                            } else {
+                                alert('Please enter a code.');
+                            }
+                        });
                     }
-                });
-            }
-        }, 100);
+                }, 100);
+            })
+            .catch(error => {
+                console.error('Error fetching code:', error);
+            });
     });
 
     bathroomMarkers.push(marker);
@@ -375,11 +402,11 @@ function updateSidebar() {
         .filter(marker => marker.getVisible() && marker !== selectedMarker)
         .map(marker => {
             const distance = computeDistance(centerLat, centerLng, marker.getPosition().lat(), marker.getPosition().lng());
-            const code = localStorage.getItem(`code_${marker.place_id}`) || 'N/A';
+            // Initially set code to 'N/A'; will fetch later
             return {
                 marker: marker,
                 name: marker.title,
-                code: code,
+                code: null,
                 distance: distance
             };
         });
@@ -389,60 +416,24 @@ function updateSidebar() {
 
     // If we have a selected marker, we will show it at the top
     if (selectedMarker) {
-        const selectedCode = localStorage.getItem(`code_${selectedMarker.place_id}`);
         const selectedItem = document.createElement('li');
         selectedItem.classList.add('expanded-item'); // Add a class to style expanded section
 
-        // Build the expanded HTML
-        let expandedHTML = `
-            <h3>${selectedMarker.title}</h3>
-            <p><strong>Code:</strong> ${selectedCode ? selectedCode : 'N/A'}</p>
-        `;
+        // Fetch the code for the selected marker
+        fetch(`/api/get_code/${selectedMarker.place_id}`)
+            .then(response => response.json())
+            .then(data => {
+                const selectedCode = data.code;
 
-        if (selectedCode) {
-            // Show current code and an Edit button
-            expandedHTML += `
-                <button class="edit-code-btn">Edit Code</button>
-                <div class="edit-code-section" style="display:none;">
-                    <label for="sidebarCodeInput">Enter New Code:</label><br>
-                    <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
-                    <button class="save-sidebar-code-btn">Save Code</button>
-                </div>
-            `;
-        } else {
-            // No code yet, show input directly
-            expandedHTML += `
-                <div class="edit-code-section">
-                    <label for="sidebarCodeInput">Enter Code:</label><br>
-                    <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
-                    <button class="save-sidebar-code-btn">Save Code</button>
-                </div>
-            `;
-        }
+                // Build the expanded HTML
+                let expandedHTML = `
+                    <h3>${selectedMarker.title}</h3>
+                    <p><strong>Code:</strong> ${selectedCode ? selectedCode : 'N/A'}</p>
+                `;
 
-        selectedItem.innerHTML = expandedHTML;
-        bathroomList.appendChild(selectedItem);
-
-        // Add event listeners for editing/saving code in the sidebar
-        const editBtn = selectedItem.querySelector('.edit-code-btn');
-        const editSection = selectedItem.querySelector('.edit-code-section');
-        const saveBtn = selectedItem.querySelector('.save-sidebar-code-btn');
-
-        if (editBtn) {
-            editBtn.addEventListener('click', () => {
-                editSection.style.display = 'block';
-            });
-        }
-
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
-                const newCode = selectedItem.querySelector('#sidebarCodeInput').value.trim();
-                if (newCode) {
-                    localStorage.setItem(`code_${selectedMarker.place_id}`, newCode);
-                    // Update the displayed code
-                    const updatedHTML = `
-                        <h3>${selectedMarker.title}</h3>
-                        <p><strong>Code:</strong> ${newCode}</p>
+                if (selectedCode) {
+                    // Show current code and an Edit button
+                    expandedHTML += `
                         <button class="edit-code-btn">Edit Code</button>
                         <div class="edit-code-section" style="display:none;">
                             <label for="sidebarCodeInput">Enter New Code:</label><br>
@@ -450,43 +441,129 @@ function updateSidebar() {
                             <button class="save-sidebar-code-btn">Save Code</button>
                         </div>
                     `;
-                    selectedItem.innerHTML = updatedHTML;
+                } else {
+                    // No code yet, show input directly
+                    expandedHTML += `
+                        <div class="edit-code-section">
+                            <label for="sidebarCodeInput">Enter Code:</label><br>
+                            <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
+                            <button class="save-sidebar-code-btn">Save Code</button>
+                        </div>
+                    `;
+                }
 
-                    // Re-attach event listeners after updating innerHTML
-                    const newEditBtn = selectedItem.querySelector('.edit-code-btn');
-                    const newEditSection = selectedItem.querySelector('.edit-code-section');
-                    const newSaveBtn = selectedItem.querySelector('.save-sidebar-code-btn');
+                selectedItem.innerHTML = expandedHTML;
+                bathroomList.appendChild(selectedItem);
 
-                    newEditBtn.addEventListener('click', () => {
-                        newEditSection.style.display = 'block';
+                // Add event listeners for editing/saving code in the sidebar
+                const editBtn = selectedItem.querySelector('.edit-code-btn');
+                const editSection = selectedItem.querySelector('.edit-code-section');
+                const saveBtn = selectedItem.querySelector('.save-sidebar-code-btn');
+
+                if (editBtn) {
+                    editBtn.addEventListener('click', () => {
+                        editSection.style.display = 'block';
                     });
+                }
 
-                    newSaveBtn.addEventListener('click', () => {
-                        const newerCode = selectedItem.querySelector('#sidebarCodeInput').value.trim();
-                        if (newerCode) {
-                            localStorage.setItem(`code_${selectedMarker.place_id}`, newerCode);
-                            // Update again
-                            selectedItem.innerHTML = `
-                                <h3>${selectedMarker.title}</h3>
-                                <p><strong>Code:</strong> ${newerCode}</p>
-                                <button class="edit-code-btn">Edit Code</button>
-                                <div class="edit-code-section" style="display:none;">
-                                    <label for="sidebarCodeInput">Enter New Code:</label><br>
-                                    <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
-                                    <button class="save-sidebar-code-btn">Save Code</button>
-                                </div>
-                            `;
-                            // Re-bind if needed, but at this point we have a stable structure.
-                            // In a real scenario, you might refactor to a function for DRYness.
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', () => {
+                        const newCode = selectedItem.querySelector('#sidebarCodeInput').value.trim();
+                        if (newCode) {
+                            // Send POST request to save code
+                            fetch('/api/save_code', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    place_id: selectedMarker.place_id,
+                                    code: newCode
+                                })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Update the displayed code
+                                    const updatedHTML = `
+                                        <h3>${selectedMarker.title}</h3>
+                                        <p><strong>Code:</strong> ${newCode}</p>
+                                        <button class="edit-code-btn">Edit Code</button>
+                                        <div class="edit-code-section" style="display:none;">
+                                            <label for="sidebarCodeInput">Enter New Code:</label><br>
+                                            <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
+                                            <button class="save-sidebar-code-btn">Save Code</button>
+                                        </div>
+                                    `;
+                                    selectedItem.innerHTML = updatedHTML;
+
+                                    // Re-attach event listeners after updating innerHTML
+                                    const newEditBtn = selectedItem.querySelector('.edit-code-btn');
+                                    const newEditSection = selectedItem.querySelector('.edit-code-section');
+                                    const newSaveBtn = selectedItem.querySelector('.save-sidebar-code-btn');
+
+                                    newEditBtn.addEventListener('click', () => {
+                                        newEditSection.style.display = 'block';
+                                    });
+
+                                    newSaveBtn.addEventListener('click', () => {
+                                        const newerCode = selectedItem.querySelector('#sidebarCodeInput').value.trim();
+                                        if (newerCode) {
+                                            fetch('/api/save_code', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json'
+                                                },
+                                                body: JSON.stringify({
+                                                    place_id: selectedMarker.place_id,
+                                                    code: newerCode
+                                                })
+                                            })
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.success) {
+                                                    // Update again
+                                                    selectedItem.innerHTML = `
+                                                        <h3>${selectedMarker.title}</h3>
+                                                        <p><strong>Code:</strong> ${newerCode}</p>
+                                                        <button class="edit-code-btn">Edit Code</button>
+                                                        <div class="edit-code-section" style="display:none;">
+                                                            <label for="sidebarCodeInput">Enter New Code:</label><br>
+                                                            <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
+                                                            <button class="save-sidebar-code-btn">Save Code</button>
+                                                        </div>
+                                                    `;
+                                                    // Re-bind event listeners again
+                                                    // Not the best practice; better refactor to use functions
+                                                } else {
+                                                    alert('Failed to save code.');
+                                                }
+                                            })
+                                            .catch(error => {
+                                                console.error('Error saving code:', error);
+                                                alert('An error occurred while saving the code.');
+                                            });
+                                        } else {
+                                            alert('Please enter a code.');
+                                        }
+                                    });
+                                } else {
+                                    alert('Failed to save code.');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error saving code:', error);
+                                alert('An error occurred while saving the code.');
+                            });
                         } else {
                             alert('Please enter a code.');
                         }
                     });
-                } else {
-                    alert('Please enter a code.');
                 }
+            })
+            .catch(error => {
+                console.error('Error fetching code:', error);
             });
-        }
     }
 
     // Add the rest of the bathrooms after the selected one (if any)
@@ -503,7 +580,22 @@ function updateSidebar() {
         name.textContent = bathroom.name;
 
         const code = document.createElement('p');
-        code.innerHTML = `<strong>Code:</strong> <span class="code">${bathroom.code}</span>`;
+        code.innerHTML = `<strong>Code:</strong> <span class="code">${bathroom.code ? bathroom.code : 'Loading...'}</span>`;
+
+        // Fetch the code for this bathroom
+        fetch(`/api/get_code/${bathroom.marker.place_id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.code) {
+                    code.querySelector('.code').textContent = data.code;
+                } else {
+                    code.querySelector('.code').textContent = 'N/A';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching code:', error);
+                code.querySelector('.code').textContent = 'Error';
+            });
 
         li.appendChild(name);
         li.appendChild(code);
