@@ -327,30 +327,3 @@ body {
 #bathroomList li.expanded {
     overflow: hidden;
 }
-
-/* Edit Code Button Styling in Sidebar */
-.edit-code-btn {
-    background-color: #4285F4;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-}
-
-.edit-code-btn:hover {
-    background-color: #357ae8;
-}
-
-.save-sidebar-code-btn {
-    background-color: #4285F4;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-}
-
-.save-sidebar-code-btn:hover {
-    background-color: #357ae8;
-}

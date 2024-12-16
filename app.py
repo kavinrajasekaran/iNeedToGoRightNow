@@ -1,11 +1,10 @@
 # app.py
 
-from flask import Flask, render_template, request, redirect, url_for, make_response, jsonify
+from flask import Flask, render_template, request, redirect, url_for, make_response
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker as factory
-from models import Base, User, AuthToken, BathroomCode
+from models import Base, User, AuthToken
 import hashlib, binascii, os, uuid
-from datetime import datetime
 
 app = Flask(__name__)
 
@@ -99,42 +98,6 @@ def create_account():
         return redirect(url_for('login', message="Account created successfully! You can now log in."))
     message = request.args.get('message')
     return render_template('create_account.html', message=message)
-
-# New API endpoint to save bathroom code
-@app.route('/api/save_code', methods=['POST'])
-def save_code():
-    user = current_user()
-    if not user:
-        return jsonify({'error': 'Unauthorized'}), 401
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'No input data provided'}), 400
-    place_id = data.get('place_id')
-    code = data.get('code')
-    if not place_id or not code:
-        return jsonify({'error': 'place_id and code are required'}), 400
-    # Check if code already exists for this user and place
-    existing_code = db_conn.query(BathroomCode).filter_by(username=user.username, place_id=place_id).first()
-    if existing_code:
-        existing_code.code = code
-        existing_code.timestamp = datetime.now()
-    else:
-        new_code = BathroomCode(username=user.username, place_id=place_id, code=code, works_or_not=True, timestamp=datetime.now())
-        db_conn.add(new_code)
-    db_conn.commit()
-    return jsonify({'success': True}), 200
-
-# New API endpoint to get bathroom code for the current user
-@app.route('/api/get_code/<place_id>', methods=['GET'])
-def get_code(place_id):
-    user = current_user()
-    if not user:
-        return jsonify({'error': 'Unauthorized'}), 401
-    code_entry = db_conn.query(BathroomCode).filter_by(username=user.username, place_id=place_id).first()
-    if code_entry:
-        return jsonify({'code': code_entry.code}), 200
-    else:
-        return jsonify({'code': None}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
