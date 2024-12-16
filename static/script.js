@@ -7,12 +7,17 @@ let bathroomMarkers = [];
 let pagination = null;
 let currentLocationMarker = null;
 let loadedPlaceIds = new Set();
+let lastSearchCenter = null;
 
 // API key
-const GOOGLE_MAPS_API_KEY = 'AIzaSyDBNdOp0vtpueqn7jGnt5oKJaQaE5INf68';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
 
 // Minimum zoom level to perform bathroom search
-const MIN_ZOOM_LEVEL = 13;
+const MIN_ZOOM_LEVEL = 14;
+
+// Thresholds set for minimal API usage
+const MIN_DISTANCE_THRESHOLD = 1000;
+const SEARCH_RADIUS = 1000;
 
 // Default Location (San Francisco Bay Area)
 const DEFAULT_LOCATION = { lat: 37.7749, lng: -122.4194 };
@@ -59,8 +64,8 @@ function initializeMap(location) {
     // Setup POI control buttons
     setupPOIControls();
 
-    // Perform an initial bathroom search
-    searchBathrooms();
+    // Perform an initial bathroom search (not needed)
+    // searchBathrooms();
 
     // Add event listener to search for bathrooms when the map becomes idle after movement
     map.addListener("idle", handleMapIdle);
@@ -72,6 +77,20 @@ function handleMapIdle() {
     hideShowBathrooms();
     // Update the sidebar with the closest bathrooms
     updateSidebar();
+
+    const currentCenter = map.getCenter();
+    if (lastSearchCenter) {
+        const distance = computeDistance(
+            lastSearchCenter.lat(),
+            lastSearchCenter.lng(),
+            currentCenter.lat(),
+            currentCenter.lng()
+        );
+        if (distance < MIN_DISTANCE_THRESHOLD) {
+            return; // Skip search if map hasn't moved significantly
+        }
+    }
+    lastSearchCenter = currentCenter;
     // Perform a bathroom search
     searchBathrooms();
 }
@@ -178,7 +197,7 @@ function addCurrentLocationMarker(location) {
     currentLocationMarker.addListener("click", () => {
         const content = `
             <div class="info-window">
-                <h3>My Location</h3>
+                <h3>You Are Here</h3>
             </div>`;
         infowindow.setContent(content);
         infowindow.open(map, currentLocationMarker);
@@ -195,7 +214,7 @@ function searchBathrooms() {
 
     const request = {
         location: map.getCenter(),
-        radius: '5000',
+        radius: SEARCH_RADIUS,
         type: 'establishment',
         keyword: 'bathroom'
     };
@@ -213,15 +232,16 @@ function callback(results, status, paginationObj) {
             createBathroomMarker(results[i]);
         }
 
-        if (paginationObj && paginationObj.hasNextPage) {
-            pagination = paginationObj;
-            // Add a timeout to fetch the next page of results
-            setTimeout(() => {
-                pagination.nextPage();
-            }, 10);
-        }
+        // Avoid fetching the next page unless explicitly needed
+        // if (paginationObj && paginationObj.hasNextPage) {
+        //     pagination = paginationObj;
+        //     // Add a timeout to fetch the next page of results
+        //     setTimeout(() => {
+        //         pagination.nextPage();
+        //     }, 10);
+        // }
     } else if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-        // Only alert for actual errors, not for zero results
+        // Only log for actual errors, not for zero results
         console.error('Places service was not successful for the following reason: ' + status);
     }
     updateSidebar();
@@ -250,79 +270,34 @@ function createBathroomMarker(place) {
 
     // Attach the place_id to the marker for later reference
     marker.place_id = place.place_id;
+    marker.vicinity = place.vicinity || '';
+    marker.rating = place.rating || null;
+    marker.url = place.url || '';
 
     // Initially set the marker's visibility based on current zoom level
     marker.setVisible(map.getZoom() >= MIN_ZOOM_LEVEL);
 
-    // Create an info window for each marker
+    // Marker click event
     marker.addListener("click", () => {
-        const placeId = place.place_id;
+        // Show info window with code information
+        const placeId = marker.place_id;
         const savedCode = localStorage.getItem(`code_${placeId}`);
 
+        let content = `
+            <div class="info-window">
+                <h3>${marker.title}</h3>
+                <p>${marker.vicinity}</p>
+                ${marker.rating ? `<p><strong>Rating:</strong> ${marker.rating} ⭐</p>` : ''}
+        `;
+
         if (savedCode) {
-            // If a code exists, display it
-            const content = `
-                <div class="info-window">
-                    <h3>${place.name}</h3>
-                    <p>${place.vicinity}</p>
-                    ${place.rating ? `<p>Rating: ${place.rating} ⭐</p>` : ''}
-                    <a href="${place.url}" target="_blank">More Info</a>
-                    <hr>
-                    <p><strong>Code:</strong> ${savedCode}</p>
-                </div>
-            `;
-            infowindow.setContent(content);
-            infowindow.open(map, marker);
+            content += `<p><strong>Code:</strong> ${savedCode}</p></div>`;
         } else {
-            // If no code, show input form
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'info-window';
-            contentDiv.innerHTML = `
-                <h3>${place.name}</h3>
-                <p>${place.vicinity}</p>
-                ${place.rating ? `<p>Rating: ${place.rating} ⭐</p>` : ''}
-                <a href="${place.url}" target="_blank">More Info</a>
-                <hr>
-                <label for="codeInput">Enter Code:</label><br>
-                <input type="text" id="codeInput" placeholder="Enter code here"><br>
-                <button id="saveCodeButton">Save Code</button>
-            `;
-
-            infowindow.setContent(contentDiv);
-            infowindow.open(map, marker);
-
-            // Add event listener for the save button
-            // Use a timeout to ensure the DOM is updated
-            setTimeout(() => {
-                const saveButton = document.getElementById('saveCodeButton');
-                if (saveButton) {
-                    saveButton.addEventListener('click', () => {
-                        const code = document.getElementById('codeInput').value.trim();
-                        if (code) {
-                            localStorage.setItem(`code_${placeId}`, code);
-                            // Update the info window to display the code
-                            const updatedContent = `
-                                <div class="info-window">
-                                    <h3>${place.name}</h3>
-                                    <p>${place.vicinity}</p>
-                                    ${place.rating ? `<p>Rating: ${place.rating} ⭐</p>` : ''}
-                                    <a href="${place.url}" target="_blank">More Info</a>
-                                    <hr>
-                                    <p><strong>Code:</strong> ${code}</p>
-                                </div>
-                            `;
-                            infowindow.setContent(updatedContent);
-                            infowindow.open(map, marker);
-                            
-                            // Update the sidebar
-                            updateSidebar();
-                        } else {
-                            alert('Please enter a code.');
-                        }
-                    });
-                }
-            }, 100);
+            content += `<p><strong>Code:</strong> unknown</p></div>`;
         }
+
+        infowindow.setContent(content);
+        infowindow.open(map, marker);
     });
 
     bathroomMarkers.push(marker);
@@ -371,58 +346,49 @@ function updateSidebar() {
     const bathroomList = document.getElementById('bathroomList');
     bathroomList.innerHTML = ''; // Clear existing list
 
-    if (bathroomMarkers.length === 0) {
-        const li = document.createElement('li');
-        li.textContent = 'No bathrooms found.';
-        bathroomList.appendChild(li);
-        return;
-    }
-
+    // Gather bathroom data within current bounds
     const center = map.getCenter();
     const centerLat = center.lat();
     const centerLng = center.lng();
 
-    // Gather bathroom data within current bounds
-    const bathrooms = bathroomMarkers
+    // Create a list of visible bathrooms
+    let visibleBathrooms = bathroomMarkers
         .filter(marker => marker.getVisible())
         .map(marker => {
-            const place = marker.title;
-            const position = marker.getPosition();
-            const distance = computeDistance(centerLat, centerLng, position.lat(), position.lng());
-
-            // Retrieve code from localStorage
+            const distance = computeDistance(centerLat, centerLng, marker.getPosition().lat(), marker.getPosition().lng());
             const code = localStorage.getItem(`code_${marker.place_id}`) || 'N/A';
-
             return {
+                marker: marker,
                 name: marker.title,
-                vicinity: '', // Optional: You can add vicinity if stored
                 code: code,
-                distance: distance,
-                marker: marker
+                distance: distance
             };
         });
 
-    if (bathrooms.length === 0) {
+    // Sort by distance
+    visibleBathrooms.sort((a, b) => a.distance - b.distance);
+
+    if (visibleBathrooms.length === 0) {
         const li = document.createElement('li');
         li.textContent = 'No bathrooms found within the current view.';
         bathroomList.appendChild(li);
         return;
     }
 
-    // Sort bathrooms by distance
-    bathrooms.sort((a, b) => a.distance - b.distance);
-
-    // Populate the sidebar with the sorted list
-    bathrooms.forEach(bathroom => {
+    visibleBathrooms.forEach(bathroom => {
         const li = document.createElement('li');
 
         const name = document.createElement('h3');
         name.textContent = bathroom.name;
 
+        const distance = document.createElement('p');
+        distance.innerHTML = `<strong>Distance:</strong> ${bathroom.distance.toFixed(0)} meters`;
+
         const code = document.createElement('p');
-        code.innerHTML = `<strong>Code:</strong> <span class="code">${bathroom.code}</span>`;
+        code.innerHTML = `<strong>Code:</strong> ${bathroom.code}`;
 
         li.appendChild(name);
+        li.appendChild(distance);
         li.appendChild(code);
         bathroomList.appendChild(li);
     });
