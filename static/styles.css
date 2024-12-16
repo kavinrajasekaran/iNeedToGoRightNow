@@ -70,13 +70,12 @@ body {
 
 /* Flash messages */
 .flash-messages {
-    padding: 10px 20px;
     flex-shrink: 0; /* Prevent flash messages from shrinking */
 }
 
 .flash-message {
     padding: 10px;
-    margin-bottom: 10px;
+    margin: 10px;
     border-radius: 3px;
 }
 
@@ -288,11 +287,6 @@ body {
 /* Container for the side view */
 .side-view-container {
     position: relative;
-    /* padding: 20px;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); */
 }
 
 /* Close button styles */
@@ -329,5 +323,4 @@ body {
 /* x symbol styling */
 #close-side-view::before {
     content: "×";
-    font-family: Arial, sans-serif;
 }
