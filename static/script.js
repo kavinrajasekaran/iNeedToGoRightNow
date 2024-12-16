@@ -8,6 +8,8 @@ let pagination = null;
 let currentLocationMarker = null;
 let loadedPlaceIds = new Set();
 let lastSearchCenter = null;
+let currentInfoWindow = null;
+let bathroomSideViewOpen = false;
 
 // API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
@@ -283,23 +285,17 @@ function createBathroomMarker(place) {
         const placeId = marker.place_id;
         const savedCode = localStorage.getItem(`code_${placeId}`);
 
-        let content = `
-            <div class="info-window">
-                <h3>${marker.title}</h3>
-                <p>${marker.vicinity}</p>
-                ${marker.rating ? `<p><strong>Rating:</strong> ${marker.rating} ⭐</p>` : ''}
-        `;
-
-        if (savedCode) {
-            content += `<p><strong>Code:</strong> ${savedCode}</p></div>`;
-        } else {
-            content += `<p><strong>Code:</strong> unknown</p></div>`;
-        }
+        const content = infoWindowText(marker, savedCode);
 
         infowindow.setContent(content);
         infowindow.open(map, marker);
+        currentInfoWindow = infowindow;
 
-        openBathroomSideView(marker.title, marker.vicinity, marker.rating, marker.place_id)
+        google.maps.event.addListener(infowindow, "closeclick", () => {
+            closeSideView()
+        });
+
+        openBathroomSideView(marker.title, marker.vicinity, marker.rating, marker.place_id);
     });
 
     bathroomMarkers.push(marker);
@@ -345,6 +341,11 @@ function isMarkerInBounds(marker) {
 // Function to update the sidebar with the closest bathrooms and their codes
 function updateSidebar() {
     hideShowBathrooms();
+
+    if (bathroomSideViewOpen) {
+        return;
+    }
+
     const bathroomList = document.getElementById('bathroomList');
     bathroomList.innerHTML = ''; // Clear existing list
 
@@ -394,29 +395,46 @@ function updateSidebar() {
         li.appendChild(code);
 
         li.addEventListener('click', () => {
-            openBathroomSideView(bathroom.marker.title, bathroom.marker.vicinity, bathroom.marker.rating, bathroom.marker.place_id)
+            // Center the map on the marker
+            map.setCenter(bathroom.marker.getPosition());
+            map.setZoom(16);
 
-            // // Center the map on the marker
-            // map.setCenter(bathroom.marker.getPosition());
-            // map.setZoom(16);
+            // Open the info window for the selected marker
+            const content = infoWindowText(bathroom.marker, bathroom.code);
+            infowindow.setContent(content);
+            infowindow.open(map, bathroom.marker);
+            currentInfoWindow = infowindow;
 
-            // // Open the info window for the selected marker
-            // const content = `
-            //     <div class="info-window">
-            //         <h3>${bathroom.marker.title}</h3>
-            //         <p>${bathroom.marker.vicinity}</p>
-            //         ${bathroom.marker.rating ? `<p><strong>Rating:</strong> ${bathroom.marker.rating} ⭐</p>` : ''}
-            //         <p><strong>Code:</strong> ${bathroom.code}</p>
-            //     </div>`;
-            // infowindow.setContent(content);
-            // infowindow.open(map, bathroom.marker);
+            google.maps.event.addListener(infowindow, "closeclick", () => {
+                closeSideView()
+            });
+
+            openBathroomSideView(bathroom.marker.title, bathroom.marker.vicinity, bathroom.marker.rating, bathroom.marker.place_id);
         });
 
         bathroomList.appendChild(li);
     });
 }
 
+function infoWindowText(marker, savedCode) {
+    let content = `
+        <div class="info-window">
+            <h3>${marker.title}</h3>
+            <p>${marker.vicinity}</p>
+            ${marker.rating ? `<p><strong>Rating:</strong> ${marker.rating} ⭐</p>` : ''}
+    `;
+
+    if (savedCode) {
+        content += `<p><strong>Code:</strong> ${savedCode}</p></div>`;
+    } else {
+        content += `<p><strong>Code:</strong> unknown</p></div>`;
+    }
+
+    return content;
+}
+
 function openBathroomSideView(name, address, rating, placeId) {
+    bathroomSideViewOpen = true;
     // Fetch the rendered template from Flask
     fetch(`/bathroom_side_view?name=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&rating=${encodeURIComponent(rating)}&placeId=${placeId}`)
         .then(response => response.text())
@@ -432,6 +450,7 @@ function openBathroomSideView(name, address, rating, placeId) {
 }
 
 function closeSideView() {
+    bathroomSideViewOpen = false;
     // Fetch the rendered template from Flask
     fetch(`/sidebar`)
         .then(response => response.text())
@@ -440,6 +459,11 @@ function closeSideView() {
             const container = document.getElementById('sidebar');
             container.innerHTML = html;
             updateSidebar();
+
+            if (currentInfoWindow) {
+                currentInfoWindow.close();
+                currentInfoWindow = null;
+            }
         })
         .catch(error => console.error('Error loading side view:', error));
 }
