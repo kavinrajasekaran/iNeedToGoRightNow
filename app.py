@@ -173,5 +173,18 @@ def add_code():
 
     return jsonify({'success': True, 'message': 'Bathroom code added successfully.'})
 
+@app.route('/get_top_code/<place_id>', methods=['GET'])
+def get_top_code_endpoint(place_id):
+    recent_code = (
+        db_session.query(BathroomCode)
+        .filter_by(place_id=place_id)
+        .order_by(BathroomCode.timestamp.desc())
+        .first()
+    )
+
+    top_code = recent_code.code if recent_code else "unknown"
+
+    return jsonify({'code': top_code})
+
 if __name__ == '__main__':
     app.run(debug=True)

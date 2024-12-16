@@ -12,6 +12,9 @@ let currentInfoWindow = null;
 let bathroomSideViewOpen = false;
 let currentOpenMarker = null;
 
+// Cache for storing fetched codes
+const codeCache = new Map();
+
 // API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
 
@@ -282,23 +285,21 @@ function createBathroomMarker(place) {
 
     // Marker click event
     marker.addListener("click", () => {
-        // Show info window with code information
-        const placeId = marker.place_id;
-        const savedCode = localStorage.getItem(`code_${placeId}`);
+        getTopCode(place.place_id).then(savedCode => {
+            // Show info window with code information
+            const content = infoWindowText(marker, savedCode);
+            infowindow.setContent(content);
+            infowindow.open(map, marker);
+            currentInfoWindow = infowindow;
 
-        const content = infoWindowText(marker, savedCode);
+            google.maps.event.addListener(infowindow, "closeclick", () => {
+                closeSideView();
+            });
 
-        infowindow.setContent(content);
-        infowindow.open(map, marker);
-        currentInfoWindow = infowindow;
+            openBathroomSideView(marker.title, marker.vicinity, marker.rating, marker.place_id);
 
-        google.maps.event.addListener(infowindow, "closeclick", () => {
-            closeSideView()
+            currentOpenMarker = marker;
         });
-
-        openBathroomSideView(marker.title, marker.vicinity, marker.rating, marker.place_id);
-
-        currentOpenMarker = marker;
     });
 
     bathroomMarkers.push(marker);
@@ -362,17 +363,15 @@ function updateSidebar() {
         .filter(marker => marker.getVisible())
         .map(marker => {
             const distance = computeDistance(centerLat, centerLng, marker.getPosition().lat(), marker.getPosition().lng());
-            const code = localStorage.getItem(`code_${marker.place_id}`) || 'N/A';
             return {
                 marker: marker,
                 name: marker.title,
-                code: code,
+                vicinity: marker.vicinity,
+                rating: marker.rating,
+                placeId: marker.place_id,
                 distance: distance
             };
         });
-
-    // Sort by distance
-    visibleBathrooms.sort((a, b) => a.distance - b.distance);
 
     if (visibleBathrooms.length === 0) {
         const li = document.createElement('li');
@@ -381,46 +380,77 @@ function updateSidebar() {
         return;
     }
 
-    visibleBathrooms.forEach(bathroom => {
-        const li = document.createElement('li');
-
-        const name = document.createElement('h3');
-        name.textContent = bathroom.name;
-
-        const distance = document.createElement('p');
-        distance.innerHTML = `<strong>Distance:</strong> ${bathroom.distance.toFixed(0)} meters`;
-
-        const code = document.createElement('p');
-        code.innerHTML = `<strong>Code:</strong> ${bathroom.code}`;
-
-        li.appendChild(name);
-        li.appendChild(distance);
-        li.appendChild(code);
-
-        li.addEventListener('click', () => {
-            currentOpenMarker = bathroom.marker;
-
-            openBathroomSideView(bathroom.marker.title, bathroom.marker.vicinity, bathroom.marker.rating, bathroom.marker.place_id);
-            
-            // Center the map on the marker
-            map.setCenter(bathroom.marker.getPosition());
-            map.setZoom(16);
-
-            // Open the info window for the selected marker
-            const content = infoWindowText(bathroom.marker, bathroom.code);
-            infowindow.setContent(content);
-            infowindow.open(map, bathroom.marker);
-            currentInfoWindow = infowindow;
-
-            google.maps.event.addListener(infowindow, "closeclick", () => {
-                closeSideView()
-            });
+    // For each bathroom, fetch the code
+    Promise.all(visibleBathrooms.map(bathroom => {
+        return getTopCode(bathroom.placeId).then(code => {
+            bathroom.code = code;
+            return bathroom;
         });
+    })).then(bathroomsWithCodes => {
+        // Sort by distance
+        bathroomsWithCodes.sort((a, b) => a.distance - b.distance);
 
-        bathroomList.appendChild(li);
-    });
+        bathroomsWithCodes.forEach(bathroom => {
+            const li = document.createElement('li');
+
+            const name = document.createElement('h3');
+            name.textContent = bathroom.name;
+
+            const distance = document.createElement('p');
+            distance.innerHTML = `<strong>Distance:</strong> ${bathroom.distance.toFixed(0)} meters`;
+
+            const code = document.createElement('p');
+            code.innerHTML = `<strong>Code:</strong> ${bathroom.code}`;
+
+            li.appendChild(name);
+            li.appendChild(distance);
+            li.appendChild(code);
+
+            li.addEventListener('click', () => {
+                currentOpenMarker = bathroom.marker;
+
+                openBathroomSideView(bathroom.marker.title, bathroom.vicinity, bathroom.rating, bathroom.placeId);
+                
+                // Center the map on the marker
+                map.setCenter(bathroom.marker.getPosition());
+                map.setZoom(16);
+
+                // Open the info window for the selected marker
+                const content = infoWindowText(bathroom.marker, bathroom.code);
+                infowindow.setContent(content);
+                infowindow.open(map, bathroom.marker);
+                currentInfoWindow = infowindow;
+
+                google.maps.event.addListener(infowindow, "closeclick", () => {
+                    closeSideView();
+                });
+            });
+
+            bathroomList.appendChild(li);
+        });
+    }).catch(error => console.error('Error updating sidebar:', error));
 }
 
+// Function to get the top code for a given placeId
+function getTopCode(placeId) {
+    if (codeCache.has(placeId)) {
+        return Promise.resolve(codeCache.get(placeId));
+    }
+
+    return fetch(`/get_top_code/${placeId}`)
+        .then(response => response.json())
+        .then(data => {
+            const code = data.code || "unknown";
+            codeCache.set(placeId, code);
+            return code;
+        })
+        .catch(error => {
+            console.error('Error fetching top code:', error);
+            return "unknown";
+        });
+}
+
+// Function to create the content for the info window
 function infoWindowText(marker, savedCode) {
     let content = `
         <div class="info-window">
@@ -513,7 +543,7 @@ function submitComment(placeId) {
     .then(data => {
         if (data.success) {
             // Reload the side view to show the new comment
-            openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating,currentOpenMarker.place_id);
+            openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating, currentOpenMarker.place_id);
         } else {
             alert(data.message);
         }
@@ -543,7 +573,7 @@ function submitCode(placeId) {
     .then(data => {
         if (data.success) {
             // Reload the side view to show the new code
-            openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating,currentOpenMarker.place_id);
+            openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating, currentOpenMarker.place_id);
         } else {
             alert(data.message);
         }
