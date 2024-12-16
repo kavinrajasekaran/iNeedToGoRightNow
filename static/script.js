@@ -8,12 +8,17 @@ let pagination = null;
 let currentLocationMarker = null;
 let loadedPlaceIds = new Set();
 let selectedMarker = null; // Global variable to track the selected marker
+let lastSearchCenter = null;
 
 // API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDBNdOp0vtpueqn7jGnt5oKJaQaE5INf68';
 
 // Minimum zoom level to perform bathroom search
-const MIN_ZOOM_LEVEL = 13;
+const MIN_ZOOM_LEVEL = 14;
+
+// Thresholds set for minimal api usage
+const MIN_DISTANCE_THRESHOLD = 1000;
+const SEARCH_RADIUS = 1000;
 
 // Default Location (San Francisco Bay Area)
 const DEFAULT_LOCATION = { lat: 37.7749, lng: -122.4194 };
@@ -60,8 +65,8 @@ function initializeMap(location) {
     // Setup POI control buttons
     setupPOIControls();
 
-    // Perform an initial bathroom search
-    searchBathrooms();
+    // Perform an initial bathroom search (not needed)
+    // searchBathrooms();
 
     // Add event listener to search for bathrooms when the map becomes idle after movement
     map.addListener("idle", handleMapIdle);
@@ -73,6 +78,20 @@ function handleMapIdle() {
     hideShowBathrooms();
     // Update the sidebar with the closest bathrooms
     updateSidebar();
+
+    const currentCenter = map.getCenter();
+    if (lastSearchCenter) {
+        const distance = computeDistance(
+            lastSearchCenter.lat(),
+            lastSearchCenter.lng(),
+            currentCenter.lat(),
+            currentCenter.lng()
+        );
+        if (distance < MIN_DISTANCE_THRESHOLD) {
+            return; // Skip search if map hasn't moved significantly
+        }
+    }
+    lastSearchCenter = currentCenter;
     // Perform a bathroom search
     searchBathrooms();
 }
@@ -188,6 +207,7 @@ function addCurrentLocationMarker(location) {
 
 // Function to search for bathrooms using PlacesService
 function searchBathrooms() {
+    console.log("searching");
     // Check if the current zoom level is sufficient
     if (map.getZoom() < MIN_ZOOM_LEVEL) {
         // Do not perform search if zoomed out too far
@@ -196,7 +216,7 @@ function searchBathrooms() {
 
     const request = {
         location: map.getCenter(),
-        radius: '5000',
+        radius: SEARCH_RADIUS,
         type: 'establishment',
         keyword: 'bathroom'
     };
@@ -214,13 +234,14 @@ function callback(results, status, paginationObj) {
             createBathroomMarker(results[i]);
         }
 
-        if (paginationObj && paginationObj.hasNextPage) {
-            pagination = paginationObj;
-            // Add a timeout to fetch the next page of results
-            setTimeout(() => {
-                pagination.nextPage();
-            }, 10);
-        }
+        // Avoid fetching the next page unless explicitly needed
+        // if (paginationObj && paginationObj.hasNextPage) {
+        //     pagination = paginationObj;
+        //     // Add a timeout to fetch the next page of results
+        //     setTimeout(() => {
+        //         pagination.nextPage();
+        //     }, 10);
+        // }
     } else if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
         // Only log for actual errors, not for zero results
         console.error('Places service was not successful for the following reason: ' + status);
