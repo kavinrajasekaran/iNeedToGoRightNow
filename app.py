@@ -1,10 +1,11 @@
 # app.py
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from sqlalchemy import create_engine
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
-from models import Base, User
+from models import Base, User, Bathroom, Comment, BathroomCode
 import hashlib, binascii, os
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = '480918'
@@ -86,7 +87,7 @@ def create_account():
 def sidebar():
     return render_template('sidebar.html')
 
-@app.route('/bathroom_side_view')
+@app.route('/bathroom_side_view', methods=['GET'])
 def bathroom_side_view():
     # Retrieve parameters from query string
     name = request.args.get('name', 'Unknown Bathroom')
@@ -94,8 +95,85 @@ def bathroom_side_view():
     rating = request.args.get('rating', 'No Rating')
     place_id = request.args.get('placeId', '')
 
-    # Render the side view template
-    return render_template('bathroom_side_view.html', name=name, address=address, rating=rating, place_id=place_id)
+    if not place_id:
+        return "Invalid bathroom identifier.", 400
+
+    # Ensure the bathroom exists in the database
+    bathroom = db_session.query(Bathroom).filter_by(place_id=place_id).first()
+    if not bathroom:
+        bathroom = Bathroom(place_id=place_id)
+        db_session.add(bathroom)
+        db_session.commit()
+
+    # Fetch comments and codes ordered chronologically
+    comments = db_session.query(Comment).filter_by(place_id=place_id).order_by(Comment.timestamp.desc()).all()
+    codes = db_session.query(BathroomCode).filter_by(place_id=place_id).order_by(BathroomCode.timestamp.desc()).all()
+
+    return render_template('bathroom_side_view.html', name=name, address=address, rating=rating, place_id=place_id, comments=comments, codes=codes)
+
+@app.route('/add_comment', methods=['POST'])
+def add_comment():
+    if 'username' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+
+    data = request.get_json()
+    place_id = data.get('place_id')
+    content = data.get('content')
+
+    if not place_id or not content:
+        return jsonify({'success': False, 'message': 'Invalid data.'}), 400
+
+    # Ensure the bathroom exists in the database
+    bathroom = db_session.query(Bathroom).filter_by(place_id=place_id).first()
+    if not bathroom:
+        bathroom = Bathroom(place_id=place_id)
+        db_session.add(bathroom)
+        db_session.commit()
+
+    # Create new comment
+    new_comment = Comment(
+        username=session['username'],
+        place_id=place_id,
+        content=content,
+        timestamp=datetime.utcnow()
+    )
+    db_session.add(new_comment)
+    db_session.commit()
+
+    return jsonify({'success': True, 'message': 'Comment added successfully.'})
+
+@app.route('/add_code', methods=['POST'])
+def add_code():
+    if 'username' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+
+    data = request.get_json()
+    place_id = data.get('place_id')
+    code = data.get('code')
+    works_or_not = data.get('works_or_not')
+
+    if not place_id or not code or works_or_not is None:
+        return jsonify({'success': False, 'message': 'Invalid data.'}), 400
+
+    # Ensure the bathroom exists in the database
+    bathroom = db_session.query(Bathroom).filter_by(place_id=place_id).first()
+    if not bathroom:
+        bathroom = Bathroom(place_id=place_id)
+        db_session.add(bathroom)
+        db_session.commit()
+
+    # Create new bathroom code
+    new_code = BathroomCode(
+        username=session['username'],
+        place_id=place_id,
+        code=code,
+        works_or_not=works_or_not,
+        timestamp=datetime.utcnow()
+    )
+    db_session.add(new_code)
+    db_session.commit()
+
+    return jsonify({'success': True, 'message': 'Bathroom code added successfully.'})
 
 if __name__ == '__main__':
     app.run(debug=True)

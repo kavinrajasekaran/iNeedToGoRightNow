@@ -433,22 +433,6 @@ function infoWindowText(marker, savedCode) {
     return content;
 }
 
-function openBathroomSideView(name, address, rating, placeId) {
-    bathroomSideViewOpen = true;
-    // Fetch the rendered template from Flask
-    fetch(`/bathroom_side_view?name=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&rating=${encodeURIComponent(rating)}&placeId=${placeId}`)
-        .then(response => response.text())
-        .then(html => {
-            // Replace the content in a container element
-            const container = document.getElementById('sidebar');
-            container.innerHTML = html;
-
-            // Optionally add any additional client-side event listeners
-            document.getElementById('close-side-view').addEventListener('click', closeSideView);
-        })
-        .catch(error => console.error('Error loading side view:', error));
-}
-
 function closeSideView() {
     bathroomSideViewOpen = false;
     // Fetch the rendered template from Flask
@@ -466,4 +450,114 @@ function closeSideView() {
             }
         })
         .catch(error => console.error('Error loading side view:', error));
+}
+
+// Function to open the bathroom side view
+function openBathroomSideView(name, address, rating, placeId) {
+    bathroomSideViewOpen = true;
+    // Fetch the rendered template from Flask
+    fetch(`/bathroom_side_view?name=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&rating=${encodeURIComponent(rating)}&placeId=${placeId}`)
+        .then(response => response.text())
+        .then(html => {
+            // Replace the content in a container element
+            const container = document.getElementById('sidebar');
+            container.innerHTML = html;
+
+            // Add event listeners for the close button
+            document.getElementById('close-side-view').addEventListener('click', closeSideView);
+
+            // Add event listeners for the add comment and add code forms
+            const addCommentForm = document.getElementById('addCommentForm');
+            if (addCommentForm) {
+                addCommentForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    submitComment(placeId);
+                });
+            }
+
+            const addCodeForm = document.getElementById('addCodeForm');
+            if (addCodeForm) {
+                addCodeForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    submitCode(placeId);
+                });
+            }
+        })
+        .catch(error => console.error('Error loading side view:', error));
+}
+
+// Function to submit a new comment via AJAX
+function submitComment(placeId) {
+    const commentInput = document.getElementById('comment');
+    const content = commentInput.value.trim();
+
+    if (!content) {
+        alert('Comment cannot be empty.');
+        return;
+    }
+
+    fetch('/add_comment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ place_id: placeId, content: content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the side view to show the new comment
+            openBathroomSideView(document.querySelector('.sidebar-title').textContent, 
+                                 document.querySelector('p strong').nextSibling.textContent.trim(), 
+                                 document.querySelector('p strong + strong') ? 
+                                     document.querySelector('p strong + strong').nextSibling.textContent.trim() : 'No Rating',
+                                 placeId);
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error submitting comment:', error));
+}
+
+// Function to submit a new bathroom code via AJAX
+function submitCode(placeId) {
+    const codeInput = document.getElementById('code');
+    const worksSelect = document.getElementById('works_or_not');
+
+    const code = codeInput.value.trim();
+    const worksValue = worksSelect.value;
+
+    if (!code) {
+        alert('Code cannot be empty.');
+        return;
+    }
+
+    if (worksValue === "") {
+        alert('Please select whether the code works.');
+        return;
+    }
+
+    const works_or_not = worksValue === 'true';
+
+    fetch('/add_code', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ place_id: placeId, code: code, works_or_not: works_or_not })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the side view to show the new code
+            openBathroomSideView(document.querySelector('.sidebar-title').textContent, 
+                                 document.querySelector('p strong').nextSibling.textContent.trim(), 
+                                 document.querySelector('p strong + strong') ? 
+                                     document.querySelector('p strong + strong').nextSibling.textContent.trim() : 'No Rating',
+                                 placeId);
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error submitting bathroom code:', error));
 }

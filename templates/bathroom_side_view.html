@@ -1,8 +1,76 @@
+<!-- templates/bathroom_side_view.html -->
+
 <div class="side-view-container">
-    <button id="close-side-view" aria-label="Close"></button>
+    <button id="close-side-view" class="close-button">&times;</button>
     <h2 class="sidebar-title">{{ name }}</h2>
     <p><strong>Address:</strong> {{ address }}</p>
     <p><strong>Rating:</strong> {{ rating }}</p>
-    <input id="bathroom-code-input" type="text" placeholder="Enter Code" />
-    <button id="save-code" onclick="saveBathroomCode('{{ place_id }}')">Save Code</button>
+
+    <hr>
+
+    <!-- Bathroom Codes Section -->
+    <div class="section">
+        <h3>Bathroom Codes</h3>
+        <ul id="codeList">
+            {% if codes %}
+                {% for code in codes %}
+                    <li>
+                        <p><strong>Code:</strong> {{ code.code }}</p>
+                        <p><strong>Works:</strong> {{ 'Yes' if code.works_or_not else 'No' }}</p>
+                        <p><em>Submitted by {{ code.username }} on {{ code.timestamp.strftime('%Y-%m-%d %H:%M') }}</em></p>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <li>No codes available for this bathroom.</li>
+            {% endif %}
+        </ul>
+
+        {% if session.get('username') %}
+            <form id="addCodeForm">
+                <h4>Add a Bathroom Code</h4>
+                <label for="code">Code:</label>
+                <input type="text" id="code" name="code" required>
+
+                <label for="works_or_not">Does it work?</label>
+                <select id="works_or_not" name="works_or_not" required>
+                    <option value="" disabled selected>Select an option</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                </select>
+
+                <button type="submit">Submit Code</button>
+            </form>
+        {% else %}
+            <p><em>Log in to add bathroom codes.</em></p>
+        {% endif %}
+    </div>
+
+    <hr>
+
+    <!-- Comments Section -->
+    <div class="section">
+        <h3>Comments</h3>
+        <ul id="commentList">
+            {% if comments %}
+                {% for comment in comments %}
+                    <li>
+                        <p>{{ comment.content }}</p>
+                        <p><em>by {{ comment.username }} on {{ comment.timestamp.strftime('%Y-%m-%d %H:%M') }}</em></p>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <li>No comments yet for this bathroom.</li>
+            {% endif %}
+        </ul>
+
+        {% if session.get('username') %}
+            <form id="addCommentForm">
+                <h4>Add a Comment</h4>
+                <textarea id="comment" name="comment" rows="3" required></textarea>
+                <button type="submit">Submit Comment</button>
+            </form>
+        {% else %}
+            <p><em>Log in to add comments.</em></p>
+        {% endif %}
+    </div>
 </div>
