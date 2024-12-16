@@ -125,6 +125,13 @@ body {
     padding: 15px;
     border: 1px solid #ddd;
     border-radius: 5px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+#bathroomList li:hover {
+    background-color: #f1f1f1;
 }
 
 #bathroomList li h3 {
@@ -140,6 +147,37 @@ body {
 #bathroomList li .code {
     font-weight: bold;
     color: #4285F4;
+}
+
+/* Expanded Sidebar Item */
+#bathroomList li.expanded {
+    background-color: #e9f5ff;
+    padding-bottom: 20px;
+}
+
+#bathroomList li.expanded .code-input {
+    margin-top: 10px;
+}
+
+#bathroomList li.expanded input[type="text"] {
+    width: 80%;
+    padding: 8px;
+    margin-right: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+#bathroomList li.expanded button.save-code {
+    padding: 8px 12px;
+    background-color: #4285F4;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#bathroomList li.expanded button.save-code:hover {
+    background-color: #357ae8;
 }
 
 /* POI Control Buttons */
@@ -255,4 +293,37 @@ body {
 /* Ensure that the container and its children do not exceed available space */
 .container, #mapContainer, #sidebar {
     min-height: 0; /* Prevent overflow caused by child elements */
+}
+
+/* Additional Styles for Expanded Sidebar Interaction */
+
+/* Highlight selected sidebar item */
+#bathroomList li.selected {
+    border-color: #4285F4;
+    background-color: #e6f0ff;
+}
+
+/* Input and button alignment in expanded view */
+#bathroomList li .code-input {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+#bathroomList li .code-input input[type="text"] {
+    flex: 1;
+}
+
+#bathroomList li .code-input button.save-code {
+    flex: none;
+}
+
+/* Smooth transition for expanding and collapsing */
+#bathroomList li {
+    transition: all 0.3s ease;
+}
+
+/* Ensure expanded content doesn't overflow */
+#bathroomList li.expanded {
+    overflow: hidden;
 }

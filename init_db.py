@@ -3,7 +3,7 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import Base, User, Bathroom, Comment, BathroomCode
+from models import Base, User, Bathroom, Comment, BathroomCode, AuthToken
 from datetime import datetime
 from app import hash_password
 
@@ -16,7 +16,7 @@ def init_db():
     # Create a SQLite database named 'bathroom.db'
     engine = create_engine('sqlite:///bathroom.db', echo=False)
     
-    # Create all tables defined in models.py
+    # Create all tables defined in models.py, including AuthToken
     Base.metadata.create_all(engine)
     
     # Create a configured "Session" class

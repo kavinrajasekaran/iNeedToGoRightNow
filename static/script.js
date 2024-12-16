@@ -7,6 +7,7 @@ let bathroomMarkers = [];
 let pagination = null;
 let currentLocationMarker = null;
 let loadedPlaceIds = new Set();
+let selectedMarker = null; // Global variable to track the selected marker
 
 // API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDBNdOp0vtpueqn7jGnt5oKJaQaE5INf68';
@@ -221,7 +222,7 @@ function callback(results, status, paginationObj) {
             }, 10);
         }
     } else if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-        // Only alert for actual errors, not for zero results
+        // Only log for actual errors, not for zero results
         console.error('Places service was not successful for the following reason: ' + status);
     }
     updateSidebar();
@@ -250,79 +251,71 @@ function createBathroomMarker(place) {
 
     // Attach the place_id to the marker for later reference
     marker.place_id = place.place_id;
+    marker.vicinity = place.vicinity || '';
+    marker.rating = place.rating || null;
+    marker.url = place.url || '';
 
     // Initially set the marker's visibility based on current zoom level
     marker.setVisible(map.getZoom() >= MIN_ZOOM_LEVEL);
 
-    // Create an info window for each marker
+    // Marker click event
     marker.addListener("click", () => {
-        const placeId = place.place_id;
+        selectedMarker = marker; 
+        updateSidebar(); // Refresh sidebar to show selected at top with expanded view
+
+        // Show info window if code is known
+        const placeId = marker.place_id;
         const savedCode = localStorage.getItem(`code_${placeId}`);
 
-        if (savedCode) {
-            // If a code exists, display it
-            const content = `
-                <div class="info-window">
-                    <h3>${place.name}</h3>
-                    <p>${place.vicinity}</p>
-                    ${place.rating ? `<p>Rating: ${place.rating} ⭐</p>` : ''}
-                    <a href="${place.url}" target="_blank">More Info</a>
-                    <hr>
-                    <p><strong>Code:</strong> ${savedCode}</p>
-                </div>
-            `;
-            infowindow.setContent(content);
-            infowindow.open(map, marker);
-        } else {
-            // If no code, show input form
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'info-window';
-            contentDiv.innerHTML = `
-                <h3>${place.name}</h3>
-                <p>${place.vicinity}</p>
-                ${place.rating ? `<p>Rating: ${place.rating} ⭐</p>` : ''}
-                <a href="${place.url}" target="_blank">More Info</a>
+        let content = `
+            <div class="info-window">
+                <h3>${marker.title}</h3>
+                <p>${marker.vicinity}</p>
+                ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
+                ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
                 <hr>
+        `;
+
+        if (savedCode) {
+            content += `<p><strong>Code:</strong> ${savedCode}</p></div>`;
+        } else {
+            content += `
                 <label for="codeInput">Enter Code:</label><br>
                 <input type="text" id="codeInput" placeholder="Enter code here"><br>
                 <button id="saveCodeButton">Save Code</button>
-            `;
-
-            infowindow.setContent(contentDiv);
-            infowindow.open(map, marker);
-
-            // Add event listener for the save button
-            // Use a timeout to ensure the DOM is updated
-            setTimeout(() => {
-                const saveButton = document.getElementById('saveCodeButton');
-                if (saveButton) {
-                    saveButton.addEventListener('click', () => {
-                        const code = document.getElementById('codeInput').value.trim();
-                        if (code) {
-                            localStorage.setItem(`code_${placeId}`, code);
-                            // Update the info window to display the code
-                            const updatedContent = `
-                                <div class="info-window">
-                                    <h3>${place.name}</h3>
-                                    <p>${place.vicinity}</p>
-                                    ${place.rating ? `<p>Rating: ${place.rating} ⭐</p>` : ''}
-                                    <a href="${place.url}" target="_blank">More Info</a>
-                                    <hr>
-                                    <p><strong>Code:</strong> ${code}</p>
-                                </div>
-                            `;
-                            infowindow.setContent(updatedContent);
-                            infowindow.open(map, marker);
-                            
-                            // Update the sidebar
-                            updateSidebar();
-                        } else {
-                            alert('Please enter a code.');
-                        }
-                    });
-                }
-            }, 100);
+            </div>`;
         }
+
+        infowindow.setContent(content);
+        infowindow.open(map, marker);
+
+        // Add event listener for saving code in the info window
+        setTimeout(() => {
+            const saveButton = document.getElementById('saveCodeButton');
+            if (saveButton) {
+                saveButton.addEventListener('click', () => {
+                    const code = document.getElementById('codeInput').value.trim();
+                    if (code) {
+                        localStorage.setItem(`code_${placeId}`, code);
+                        // Update info window
+                        const updatedContent = `
+                            <div class="info-window">
+                                <h3>${marker.title}</h3>
+                                <p>${marker.vicinity}</p>
+                                ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
+                                ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
+                                <hr>
+                                <p><strong>Code:</strong> ${code}</p>
+                            </div>
+                        `;
+                        infowindow.setContent(updatedContent);
+                        updateSidebar(); // Update sidebar as well
+                    } else {
+                        alert('Please enter a code.');
+                    }
+                });
+            }
+        }, 100);
     });
 
     bathroomMarkers.push(marker);
@@ -366,56 +359,146 @@ function isMarkerInBounds(marker) {
 }
 
 // Function to update the sidebar with the closest bathrooms and their codes
+// If a marker is selected, show it at the top with an expanded view allowing code editing
 function updateSidebar() {
     hideShowBathrooms();
     const bathroomList = document.getElementById('bathroomList');
     bathroomList.innerHTML = ''; // Clear existing list
 
-    if (bathroomMarkers.length === 0) {
-        const li = document.createElement('li');
-        li.textContent = 'No bathrooms found.';
-        bathroomList.appendChild(li);
-        return;
-    }
-
+    // Gather bathroom data within current bounds
     const center = map.getCenter();
     const centerLat = center.lat();
     const centerLng = center.lng();
 
-    // Gather bathroom data within current bounds
-    const bathrooms = bathroomMarkers
-        .filter(marker => marker.getVisible())
+    // Create a list of visible bathrooms (excluding the selected one if it's visible, because we'll handle selected separately)
+    let visibleBathrooms = bathroomMarkers
+        .filter(marker => marker.getVisible() && marker !== selectedMarker)
         .map(marker => {
-            const place = marker.title;
-            const position = marker.getPosition();
-            const distance = computeDistance(centerLat, centerLng, position.lat(), position.lng());
-
-            // Retrieve code from localStorage
+            const distance = computeDistance(centerLat, centerLng, marker.getPosition().lat(), marker.getPosition().lng());
             const code = localStorage.getItem(`code_${marker.place_id}`) || 'N/A';
-
             return {
+                marker: marker,
                 name: marker.title,
-                vicinity: '', // Optional: You can add vicinity if stored
                 code: code,
-                distance: distance,
-                marker: marker
+                distance: distance
             };
         });
 
-    if (bathrooms.length === 0) {
+    // Sort by distance
+    visibleBathrooms.sort((a, b) => a.distance - b.distance);
+
+    // If we have a selected marker, we will show it at the top
+    if (selectedMarker) {
+        const selectedCode = localStorage.getItem(`code_${selectedMarker.place_id}`);
+        const selectedItem = document.createElement('li');
+        selectedItem.classList.add('expanded-item'); // Add a class to style expanded section
+
+        // Build the expanded HTML
+        let expandedHTML = `
+            <h3>${selectedMarker.title}</h3>
+            <p><strong>Code:</strong> ${selectedCode ? selectedCode : 'N/A'}</p>
+        `;
+
+        if (selectedCode) {
+            // Show current code and an Edit button
+            expandedHTML += `
+                <button class="edit-code-btn">Edit Code</button>
+                <div class="edit-code-section" style="display:none;">
+                    <label for="sidebarCodeInput">Enter New Code:</label><br>
+                    <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
+                    <button class="save-sidebar-code-btn">Save Code</button>
+                </div>
+            `;
+        } else {
+            // No code yet, show input directly
+            expandedHTML += `
+                <div class="edit-code-section">
+                    <label for="sidebarCodeInput">Enter Code:</label><br>
+                    <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
+                    <button class="save-sidebar-code-btn">Save Code</button>
+                </div>
+            `;
+        }
+
+        selectedItem.innerHTML = expandedHTML;
+        bathroomList.appendChild(selectedItem);
+
+        // Add event listeners for editing/saving code in the sidebar
+        const editBtn = selectedItem.querySelector('.edit-code-btn');
+        const editSection = selectedItem.querySelector('.edit-code-section');
+        const saveBtn = selectedItem.querySelector('.save-sidebar-code-btn');
+
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                editSection.style.display = 'block';
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                const newCode = selectedItem.querySelector('#sidebarCodeInput').value.trim();
+                if (newCode) {
+                    localStorage.setItem(`code_${selectedMarker.place_id}`, newCode);
+                    // Update the displayed code
+                    const updatedHTML = `
+                        <h3>${selectedMarker.title}</h3>
+                        <p><strong>Code:</strong> ${newCode}</p>
+                        <button class="edit-code-btn">Edit Code</button>
+                        <div class="edit-code-section" style="display:none;">
+                            <label for="sidebarCodeInput">Enter New Code:</label><br>
+                            <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
+                            <button class="save-sidebar-code-btn">Save Code</button>
+                        </div>
+                    `;
+                    selectedItem.innerHTML = updatedHTML;
+
+                    // Re-attach event listeners after updating innerHTML
+                    const newEditBtn = selectedItem.querySelector('.edit-code-btn');
+                    const newEditSection = selectedItem.querySelector('.edit-code-section');
+                    const newSaveBtn = selectedItem.querySelector('.save-sidebar-code-btn');
+
+                    newEditBtn.addEventListener('click', () => {
+                        newEditSection.style.display = 'block';
+                    });
+
+                    newSaveBtn.addEventListener('click', () => {
+                        const newerCode = selectedItem.querySelector('#sidebarCodeInput').value.trim();
+                        if (newerCode) {
+                            localStorage.setItem(`code_${selectedMarker.place_id}`, newerCode);
+                            // Update again
+                            selectedItem.innerHTML = `
+                                <h3>${selectedMarker.title}</h3>
+                                <p><strong>Code:</strong> ${newerCode}</p>
+                                <button class="edit-code-btn">Edit Code</button>
+                                <div class="edit-code-section" style="display:none;">
+                                    <label for="sidebarCodeInput">Enter New Code:</label><br>
+                                    <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
+                                    <button class="save-sidebar-code-btn">Save Code</button>
+                                </div>
+                            `;
+                            // Re-bind if needed, but at this point we have a stable structure.
+                            // In a real scenario, you might refactor to a function for DRYness.
+                        } else {
+                            alert('Please enter a code.');
+                        }
+                    });
+                } else {
+                    alert('Please enter a code.');
+                }
+            });
+        }
+    }
+
+    // Add the rest of the bathrooms after the selected one (if any)
+    if (visibleBathrooms.length === 0 && !selectedMarker) {
         const li = document.createElement('li');
         li.textContent = 'No bathrooms found within the current view.';
         bathroomList.appendChild(li);
         return;
     }
 
-    // Sort bathrooms by distance
-    bathrooms.sort((a, b) => a.distance - b.distance);
-
-    // Populate the sidebar with the sorted list
-    bathrooms.forEach(bathroom => {
+    visibleBathrooms.forEach(bathroom => {
         const li = document.createElement('li');
-
         const name = document.createElement('h3');
         name.textContent = bathroom.name;
 
