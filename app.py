@@ -82,5 +82,20 @@ def create_account():
 
     return render_template('create_account.html')
 
+@app.route('/sidebar')
+def sidebar():
+    return render_template('sidebar.html')
+
+@app.route('/bathroom_side_view')
+def bathroom_side_view():
+    # Retrieve parameters from query string
+    name = request.args.get('name', 'Unknown Bathroom')
+    address = request.args.get('address', 'Unknown Address')
+    rating = request.args.get('rating', 'No Rating')
+    place_id = request.args.get('placeId', '')
+
+    # Render the side view template
+    return render_template('bathroom_side_view.html', name=name, address=address, rating=rating, place_id=place_id)
+
 if __name__ == '__main__':
     app.run(debug=True)

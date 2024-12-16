@@ -298,6 +298,8 @@ function createBathroomMarker(place) {
 
         infowindow.setContent(content);
         infowindow.open(map, marker);
+
+        openBathroomSideView(marker.title, marker.vicinity, marker.rating, marker.place_id)
     });
 
     bathroomMarkers.push(marker);
@@ -390,6 +392,66 @@ function updateSidebar() {
         li.appendChild(name);
         li.appendChild(distance);
         li.appendChild(code);
+
+        li.addEventListener('click', () => {
+            openBathroomSideView(bathroom.marker.title, bathroom.marker.vicinity, bathroom.marker.rating, bathroom.marker.place_id)
+
+            // // Center the map on the marker
+            // map.setCenter(bathroom.marker.getPosition());
+            // map.setZoom(16);
+
+            // // Open the info window for the selected marker
+            // const content = `
+            //     <div class="info-window">
+            //         <h3>${bathroom.marker.title}</h3>
+            //         <p>${bathroom.marker.vicinity}</p>
+            //         ${bathroom.marker.rating ? `<p><strong>Rating:</strong> ${bathroom.marker.rating} ⭐</p>` : ''}
+            //         <p><strong>Code:</strong> ${bathroom.code}</p>
+            //     </div>`;
+            // infowindow.setContent(content);
+            // infowindow.open(map, bathroom.marker);
+        });
+
         bathroomList.appendChild(li);
     });
+}
+
+function openBathroomSideView(name, address, rating, placeId) {
+    // Fetch the rendered template from Flask
+    fetch(`/bathroom_side_view?name=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&rating=${encodeURIComponent(rating)}&placeId=${placeId}`)
+        .then(response => response.text())
+        .then(html => {
+            // Replace the content in a container element
+            const container = document.getElementById('sidebar');
+            container.innerHTML = html;
+
+            // Optionally add any additional client-side event listeners
+            document.getElementById('close-side-view').addEventListener('click', closeSideView);
+        })
+        .catch(error => console.error('Error loading side view:', error));
+}
+
+function closeSideView() {
+    // Fetch the rendered template from Flask
+    fetch(`/sidebar`)
+        .then(response => response.text())
+        .then(html => {
+            // Replace the content in a container element
+            const container = document.getElementById('sidebar');
+            container.innerHTML = html;
+            updateSidebar();
+        })
+        .catch(error => console.error('Error loading side view:', error));
+}
+
+function saveBathroomCode(placeId) {
+    const codeInput = document.getElementById('bathroom-code-input');
+    const code = codeInput.value;
+
+    if (code) {
+        localStorage.setItem(`code_${placeId}`, code);
+        alert('Code saved successfully!');
+    } else {
+        alert('Please enter a code before saving.');
+    }
 }

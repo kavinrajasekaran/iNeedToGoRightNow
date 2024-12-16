@@ -1,0 +1,8 @@
+<div class="side-view-container">
+    <button id="close-side-view" onclick="closeSideView()" aria-label="Close"></button>
+    <h2 class="sidebar-title">{{ name }}</h2>
+    <p><strong>Address:</strong> {{ address }}</p>
+    <p><strong>Rating:</strong> {{ rating }}</p>
+    <input id="bathroom-code-input" type="text" placeholder="Enter Code" />
+    <button id="save-code" onclick="saveBathroomCode('{{ place_id }}')">Save Code</button>
+</div>

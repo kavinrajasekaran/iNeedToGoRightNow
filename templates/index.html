@@ -5,7 +5,9 @@
 {% block content %}
 <div class="container">
     {% include 'map.html' %}
-    {% include 'sidebar.html' %}
+    <div id="sidebar">
+        {% include 'sidebar.html' %}
+    </div>
 </div>
 
 <!-- Main JavaScript File -->
