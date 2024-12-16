@@ -11,7 +11,7 @@ let selectedMarker = null; // Global variable to track the selected marker
 let lastSearchCenter = null;
 
 // API key
-const GOOGLE_MAPS_API_KEY = 'AIzaSyDBNdOp0vtpueqn7jGnt5oKJaQaE5INf68';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
 
 // Minimum zoom level to perform bathroom search
 const MIN_ZOOM_LEVEL = 14;
@@ -198,7 +198,7 @@ function addCurrentLocationMarker(location) {
     currentLocationMarker.addListener("click", () => {
         const content = `
             <div class="info-window">
-                <h3>My Location</h3>
+                <h3>You Are Here</h3>
             </div>`;
         infowindow.setContent(content);
         infowindow.open(map, currentLocationMarker);
@@ -207,7 +207,6 @@ function addCurrentLocationMarker(location) {
 
 // Function to search for bathrooms using PlacesService
 function searchBathrooms() {
-    console.log("searching");
     // Check if the current zoom level is sufficient
     if (map.getZoom() < MIN_ZOOM_LEVEL) {
         // Do not perform search if zoomed out too far
@@ -281,7 +280,7 @@ function createBathroomMarker(place) {
 
     // Marker click event
     marker.addListener("click", () => {
-        selectedMarker = marker; 
+        selectedMarker = marker;
         updateSidebar(); // Refresh sidebar to show selected at top with expanded view
 
         // Show info window if code is known
@@ -293,50 +292,44 @@ function createBathroomMarker(place) {
                 <h3>${marker.title}</h3>
                 <p>${marker.vicinity}</p>
                 ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
-                ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
-                <hr>
         `;
 
         if (savedCode) {
-            content += `<p><strong>Code:</strong> ${savedCode}</p></div>`;
+            content += `<p>Code: ${savedCode}</p></div>`;
         } else {
-            content += `
-                <label for="codeInput">Enter Code:</label><br>
-                <input type="text" id="codeInput" placeholder="Enter code here"><br>
-                <button id="saveCodeButton">Save Code</button>
-            </div>`;
+            content += `<p>No Code Known</p></div>`;
         }
 
         infowindow.setContent(content);
         infowindow.open(map, marker);
 
         // Add event listener for saving code in the info window
-        setTimeout(() => {
-            const saveButton = document.getElementById('saveCodeButton');
-            if (saveButton) {
-                saveButton.addEventListener('click', () => {
-                    const code = document.getElementById('codeInput').value.trim();
-                    if (code) {
-                        localStorage.setItem(`code_${placeId}`, code);
-                        // Update info window
-                        const updatedContent = `
-                            <div class="info-window">
-                                <h3>${marker.title}</h3>
-                                <p>${marker.vicinity}</p>
-                                ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
-                                ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
-                                <hr>
-                                <p><strong>Code:</strong> ${code}</p>
-                            </div>
-                        `;
-                        infowindow.setContent(updatedContent);
-                        updateSidebar(); // Update sidebar as well
-                    } else {
-                        alert('Please enter a code.');
-                    }
-                });
-            }
-        }, 100);
+        // setTimeout(() => {
+        //     const saveButton = document.getElementById('saveCodeButton');
+        //     if (saveButton) {
+        //         saveButton.addEventListener('click', () => {
+        //             const code = document.getElementById('codeInput').value.trim();
+        //             if (code) {
+        //                 localStorage.setItem(`code_${placeId}`, code);
+        //                 // Update info window
+        //                 const updatedContent = `
+        //                     <div class="info-window">
+        //                         <h3>${marker.title}</h3>
+        //                         <p>${marker.vicinity}</p>
+        //                         ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
+        //                         ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
+        //                         <hr>
+        //                         <p><strong>Code:</strong> ${code}</p>
+        //                     </div>
+        //                 `;
+        //                 infowindow.setContent(updatedContent);
+        //                 updateSidebar(); // Update sidebar as well
+        //             } else {
+        //                 alert('Please enter a code.');
+        //             }
+        //         });
+        //     }
+        // }, 100);
     });
 
     bathroomMarkers.push(marker);
