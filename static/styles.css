@@ -284,11 +284,6 @@ body {
     margin-bottom: 10px;
 }
 
-/* Container for the side view */
-.side-view-container {
-    position: relative;
-}
-
 /* Close button styles */
 #close-side-view {
     position: absolute; /* Positioned relative to the container */
@@ -322,7 +317,7 @@ body {
 
 /* Container for the entire side view */
 .side-view-container {
-    padding: 20px;
+    position: relative;
     overflow-y: auto;
     height: 100%;
     background-color: #f9f9f9;

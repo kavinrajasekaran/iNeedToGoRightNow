@@ -10,6 +10,7 @@ let loadedPlaceIds = new Set();
 let lastSearchCenter = null;
 let currentInfoWindow = null;
 let bathroomSideViewOpen = false;
+let currentOpenMarker = null;
 
 // API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
@@ -296,6 +297,8 @@ function createBathroomMarker(place) {
         });
 
         openBathroomSideView(marker.title, marker.vicinity, marker.rating, marker.place_id);
+
+        currentOpenMarker = marker;
     });
 
     bathroomMarkers.push(marker);
@@ -395,6 +398,8 @@ function updateSidebar() {
         li.appendChild(code);
 
         li.addEventListener('click', () => {
+            currentOpenMarker = bathroom.marker;
+
             openBathroomSideView(bathroom.marker.title, bathroom.marker.vicinity, bathroom.marker.rating, bathroom.marker.place_id);
             
             // Center the map on the marker
@@ -435,6 +440,7 @@ function infoWindowText(marker, savedCode) {
 
 function closeSideView() {
     bathroomSideViewOpen = false;
+    currentOpenMarker = null;
     // Fetch the rendered template from Flask
     fetch(`/sidebar`)
         .then(response => response.text())
@@ -507,11 +513,7 @@ function submitComment(placeId) {
     .then(data => {
         if (data.success) {
             // Reload the side view to show the new comment
-            openBathroomSideView(document.querySelector('.sidebar-title').textContent, 
-                                 document.querySelector('p strong').nextSibling.textContent.trim(), 
-                                 document.querySelector('p strong + strong') ? 
-                                     document.querySelector('p strong + strong').nextSibling.textContent.trim() : 'No Rating',
-                                 placeId);
+            openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating,currentOpenMarker.place_id);
         } else {
             alert(data.message);
         }
@@ -541,11 +543,7 @@ function submitCode(placeId) {
     .then(data => {
         if (data.success) {
             // Reload the side view to show the new code
-            openBathroomSideView(document.querySelector('.sidebar-title').textContent, 
-                                 document.querySelector('p strong').nextSibling.textContent.trim(), 
-                                 document.querySelector('p strong + strong') ? 
-                                     document.querySelector('p strong + strong').nextSibling.textContent.trim() : 'No Rating',
-                                 placeId);
+            openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating,currentOpenMarker.place_id);
         } else {
             alert(data.message);
         }
