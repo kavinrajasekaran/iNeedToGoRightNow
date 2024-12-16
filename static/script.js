@@ -18,7 +18,7 @@ const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
 const MIN_ZOOM_LEVEL = 14;
 
 // Thresholds set for minimal API usage
-const MIN_DISTANCE_THRESHOLD = 1000;
+const MIN_DISTANCE_THRESHOLD = 500;
 const SEARCH_RADIUS = 1000;
 
 // Default Location (San Francisco Bay Area)
@@ -522,29 +522,20 @@ function submitComment(placeId) {
 // Function to submit a new bathroom code via AJAX
 function submitCode(placeId) {
     const codeInput = document.getElementById('code');
-    const worksSelect = document.getElementById('works_or_not');
 
     const code = codeInput.value.trim();
-    const worksValue = worksSelect.value;
 
     if (!code) {
         alert('Code cannot be empty.');
         return;
     }
 
-    if (worksValue === "") {
-        alert('Please select whether the code works.');
-        return;
-    }
-
-    const works_or_not = worksValue === 'true';
-
     fetch('/add_code', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ place_id: placeId, code: code, works_or_not: works_or_not })
+        body: JSON.stringify({ place_id: placeId, code: code })
     })
     .then(response => response.json())
     .then(data => {

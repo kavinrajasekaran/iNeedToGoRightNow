@@ -35,51 +35,8 @@ def init_db():
             User(username='eve', password=hash_password('eve')),
         ]
 
-        # Create test Bathrooms
-        bathrooms = [
-            # Bathroom(place_id='ChIJN1t_tDeuEmsRUsoyG83frY4'),
-            # Bathroom(place_id='ChIJLfyY2E4awokRfw0kdE6rLlE'),
-            # Bathroom(place_id='ChIJd8BlQ2BZwokRAFUEcm_qrcA'),
-            # Bathroom(place_id='ChIJGzE9DS1awokRScdR9JcNv0Q'),
-            # Bathroom(place_id='ChIJVXealLU_xkcRja_At0z9AGY'),
-        ]
-
-        # Add Users and Bathrooms to session
+        # Add Users to session
         session.add_all(users)
-        session.add_all(bathrooms)
-        session.commit()
-
-        # Create test Comments
-        comments = [
-            # Comment(username='alice', place_id='ChIJN1t_tDeuEmsRUsoyG83frY4',
-            #         content='Clean and well-maintained.', timestamp=datetime.now()),
-            # Comment(username='bob', place_id='ChIJLfyY2E4awokRfw0kdE6rLlE',
-            #         content='Was a bit dirty when I arrived.', timestamp=datetime.now()),
-            # Comment(username='charlie', place_id='ChIJd8BlQ2BZwokRAFUEcm_qrcA',
-            #         content='Great location, easy to find.', timestamp=datetime.now()),
-            # Comment(username='diana', place_id='ChIJGzE9DS1awokRScdR9JcNv0Q',
-            #         content='Friendly staff and clean facilities.', timestamp=datetime.now()),
-            # Comment(username='eve', place_id='ChIJVXealLU_xkcRja_At0z9AGY',
-            #         content='The code did not work for me.', timestamp=datetime.now()),
-        ]
-
-        # Create test BathroomCodes
-        bathroom_codes = [
-            # BathroomCode(username='alice', place_id='ChIJN1t_tDeuEmsRUsoyG83frY4',
-            #              code='1234', works_or_not=True, timestamp=datetime.now()),
-            # BathroomCode(username='bob', place_id='ChIJLfyY2E4awokRfw0kdE6rLlE',
-            #              code='5678', works_or_not=False, timestamp=datetime.now()),
-            # BathroomCode(username='charlie', place_id='ChIJd8BlQ2BZwokRAFUEcm_qrcA',
-            #              code='9012', works_or_not=True, timestamp=datetime.now()),
-            # BathroomCode(username='diana', place_id='ChIJGzE9DS1awokRScdR9JcNv0Q',
-            #              code='3456', works_or_not=True, timestamp=datetime.now()),
-            # BathroomCode(username='eve', place_id='ChIJVXealLU_xkcRja_At0z9AGY',
-            #              code='7890', works_or_not=False, timestamp=datetime.now()),
-        ]
-
-        # Add Comments and BathroomCodes to session
-        session.add_all(comments)
-        session.add_all(bathroom_codes)
         session.commit()
 
         print("Database initialized with test data.")

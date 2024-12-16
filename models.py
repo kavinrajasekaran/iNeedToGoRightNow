@@ -50,11 +50,10 @@ class BathroomCode(Base):
     username = Column(String(50), ForeignKey('users.username'), nullable=False)
     place_id = Column(String(100), ForeignKey('bathrooms.place_id'), nullable=False)
     code = Column(String(50), nullable=False)
-    works_or_not = Column(Boolean, nullable=False)
     timestamp = Column(DateTime, nullable=False)
 
     user = relationship('User', back_populates='bathroom_codes')
     bathroom = relationship('Bathroom', back_populates='bathroom_codes')
 
     def __repr__(self):
-        return f"<BathroomCode(id={self.id}, user='{self.username}', bathroom='{self.place_id}', works={self.works_or_not})>"
+        return f"<BathroomCode(id={self.id}, user='{self.username}', bathroom='{self.place_id}')>"

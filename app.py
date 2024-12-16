@@ -150,9 +150,8 @@ def add_code():
     data = request.get_json()
     place_id = data.get('place_id')
     code = data.get('code')
-    works_or_not = data.get('works_or_not')
 
-    if not place_id or not code or works_or_not is None:
+    if not place_id or not code:
         return jsonify({'success': False, 'message': 'Invalid data.'}), 400
 
     # Ensure the bathroom exists in the database
@@ -167,8 +166,7 @@ def add_code():
         username=session['username'],
         place_id=place_id,
         code=code,
-        works_or_not=works_or_not,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now()
     )
     db_session.add(new_code)
     db_session.commit()

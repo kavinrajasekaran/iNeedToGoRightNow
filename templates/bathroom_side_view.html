@@ -16,7 +16,6 @@
                 {% for code in codes %}
                     <li>
                         <p><strong>Code:</strong> {{ code.code }}</p>
-                        <p><strong>Works:</strong> {{ 'Yes' if code.works_or_not else 'No' }}</p>
                         <p><em>Submitted by {{ code.username }} on {{ code.timestamp.strftime('%Y-%m-%d %H:%M') }}</em></p>
                     </li>
                 {% endfor %}
@@ -30,14 +29,6 @@
                 <h4>Add a Bathroom Code</h4>
                 <label for="code">Code:</label>
                 <input type="text" id="code" name="code" required>
-
-                <label for="works_or_not">Does it work?</label>
-                <select id="works_or_not" name="works_or_not" required>
-                    <option value="" disabled selected>Select an option</option>
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                </select>
-
                 <button type="submit">Submit Code</button>
             </form>
         {% else %}
