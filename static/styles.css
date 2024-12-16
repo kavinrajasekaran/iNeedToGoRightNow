@@ -321,7 +321,7 @@ body {
 }
 
 /* Container for the entire side view */
-.bathroom-side-view-container {
+.side-view-container {
     padding: 20px;
     overflow-y: auto;
     height: 100%;
@@ -329,31 +329,8 @@ body {
     font-family: Arial, sans-serif;
 }
 
-/* Close button */
-.bathroom-side-view-close-button {
-    background: none;
-    border: none;
-    font-size: 24px;
-    float: right;
-    cursor: pointer;
-    color: #333;
-    padding: 0;
-}
-
-/* Title of the sidebar */
-.bathroom-side-view-title {
-    margin-top: 0;
-    font-size: 24px;
-    color: #333;
-}
-
-/* Section wrapper */
-.bathroom-side-view-section {
-    margin-top: 20px;
-}
-
 /* Section headers */
-.bathroom-side-view-section-header {
+.side-view-container .section-header {
     margin-bottom: 10px;
     border-bottom: 1px solid #ccc;
     padding-bottom: 5px;
@@ -362,13 +339,13 @@ body {
 }
 
 /* Lists within sections */
-.bathroom-side-view-list {
+.side-view-container ul {
     list-style-type: none;
     padding: 0;
 }
 
 /* List items */
-.bathroom-side-view-list-item {
+.side-view-container li {
     background-color: #fff;
     padding: 10px;
     margin-bottom: 10px;
@@ -377,36 +354,36 @@ body {
 }
 
 /* Paragraphs within list items */
-.bathroom-side-view-list-item p {
+.side-view-container li p {
     margin: 5px 0;
     color: #444;
     font-size: 14px;
 }
 
 /* Emphasized text within list items */
-.bathroom-side-view-list-item p em {
+.side-view-container li p em {
     color: #777;
     font-size: 12px;
 }
 
 /* Forms within sections */
-.bathroom-side-view-form {
+.side-view-container form {
     display: flex;
     flex-direction: column;
     margin-top: 10px;
 }
 
 /* Labels within forms */
-.bathroom-side-view-form-label {
+.side-view-container form label {
     margin-top: 10px;
     font-size: 14px;
     color: #333;
 }
 
 /* Input fields, textareas, and selects within forms */
-.bathroom-side-view-form-input,
-.bathroom-side-view-form-textarea,
-.bathroom-side-view-form-select {
+.side-view-container form input,
+.side-view-container form textarea,
+.side-view-container form select {
     padding: 8px;
     margin-top: 5px;
     border: 1px solid #ccc;
@@ -417,7 +394,7 @@ body {
 }
 
 /* Submit buttons within forms */
-.bathroom-side-view-form-button {
+.side-view-container form button {
     margin-top: 15px;
     padding: 10px;
     background-color: #4285F4;
@@ -429,12 +406,12 @@ body {
     align-self: flex-start;
 }
 
-.bathroom-side-view-form-button:hover {
+.side-view-container form button:hover {
     background-color: #357ae8;
 }
 
 /* Horizontal rule */
-.bathroom-side-view-hr {
+.side-view-container hr {
     border: none;
     border-top: 1px solid #ccc;
     margin: 20px 0;
