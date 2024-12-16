@@ -395,6 +395,8 @@ function updateSidebar() {
         li.appendChild(code);
 
         li.addEventListener('click', () => {
+            openBathroomSideView(bathroom.marker.title, bathroom.marker.vicinity, bathroom.marker.rating, bathroom.marker.place_id);
+            
             // Center the map on the marker
             map.setCenter(bathroom.marker.getPosition());
             map.setZoom(16);
@@ -408,8 +410,6 @@ function updateSidebar() {
             google.maps.event.addListener(infowindow, "closeclick", () => {
                 closeSideView()
             });
-
-            openBathroomSideView(bathroom.marker.title, bathroom.marker.vicinity, bathroom.marker.rating, bathroom.marker.place_id);
         });
 
         bathroomList.appendChild(li);
@@ -466,16 +466,4 @@ function closeSideView() {
             }
         })
         .catch(error => console.error('Error loading side view:', error));
-}
-
-function saveBathroomCode(placeId) {
-    const codeInput = document.getElementById('bathroom-code-input');
-    const code = codeInput.value;
-
-    if (code) {
-        localStorage.setItem(`code_${placeId}`, code);
-        alert('Code saved successfully!');
-    } else {
-        alert('Please enter a code before saving.');
-    }
 }
