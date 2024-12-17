@@ -397,7 +397,7 @@ function updateSidebar() {
             distance.innerHTML = `<strong>Distance:</strong> ${bathroom.distance.toFixed(0)} meters`;
 
             const code = document.createElement('p');
-            code.innerHTML = `<strong>Latest Code:</strong> ${sanitizeString(bathroom.code)}`;
+            code.innerHTML = `<strong>Likely Code:</strong> ${sanitizeString(bathroom.code)}`;
 
             li.appendChild(name);
             li.appendChild(distance);
@@ -457,9 +457,9 @@ function infoWindowText(marker, savedCode) {
     `;
 
     if (savedCode) {
-        content += `<p><strong>Latest Code:</strong> ${sanitizeString(savedCode)}</p></div>`;
+        content += `<p><strong>Likely Code:</strong> ${sanitizeString(savedCode)}</p></div>`;
     } else {
-        content += `<p><strong>Latest Code:</strong> Unknown</p></div>`;
+        content += `<p><strong>Likely Code:</strong> Unknown</p></div>`;
     }
 
     return content;

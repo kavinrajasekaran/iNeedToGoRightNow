@@ -1,7 +1,7 @@
 # app.py
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from sqlalchemy import create_engine, and_, func
+from sqlalchemy import create_engine, and_, func, case
 from sqlalchemy.orm import sessionmaker
 from models import Base, User, Bathroom, Comment, BathroomCode, BathroomCodeVote
 import hashlib, binascii, os
@@ -195,16 +195,36 @@ def add_code():
 
 @app.route('/get_top_code/<place_id>', methods=['GET'])
 def get_top_code_endpoint(place_id):
-    recent_code = (
-        db_session.query(BathroomCode)
-        .filter_by(place_id=place_id)
-        .order_by(BathroomCode.timestamp.desc())
+    # Calculate the vote score (upvotes - downvotes) for each bathroom code
+    vote_score = (
+        func.sum(
+            case(
+                (BathroomCodeVote.vote_type == 'upvote', 1),
+                else_=0
+            )
+        ) - func.sum(
+            case(
+                (BathroomCodeVote.vote_type == 'downvote', 1),
+                else_=0
+            )
+        )
+    ).label('score')
+
+    # Query to find the bathroom code with the highest vote score
+    # If there's a tie, the newer code (with the latest timestamp) is selected
+    top_code = (
+        db_session.query(BathroomCode, vote_score)
+        .outerjoin(BathroomCodeVote, BathroomCode.id == BathroomCodeVote.code_id)
+        .filter(BathroomCode.place_id == place_id)
+        .group_by(BathroomCode.id)
+        .order_by(vote_score.desc(), BathroomCode.timestamp.desc())
         .first()
     )
 
-    top_code = recent_code.code if recent_code else "Unknown"
+    # Retrieve the code text if a top code exists
+    top_code_text = top_code[0].code if top_code else "Unknown"
 
-    return jsonify({'code': top_code})
+    return jsonify({'code': top_code_text})
 
 @app.route('/delete_comment', methods=['POST'])
 def delete_comment():
