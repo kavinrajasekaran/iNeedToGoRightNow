@@ -16,9 +16,12 @@
         <ul id="codeList">
             {% if codes %}
                 {% for code in codes %}
-                    <li>
+                    <li id="code-{{ code.id }}">
                         <p><strong>Code:</strong> {{ code.code }}</p>
                         <p><em>Submitted by {{ code.username }} on {{ code.timestamp.strftime('%Y-%m-%d %H:%M') }}</em></p>
+                        {% if session.get('username') == code.username %}
+                            <button class="delete-code-button" data-code-id="{{ code.id }}">Delete</button>
+                        {% endif %}
                     </li>
                 {% endfor %}
             {% else %}
@@ -46,9 +49,12 @@
         <ul id="commentList">
             {% if comments %}
                 {% for comment in comments %}
-                    <li>
+                    <li id="comment-{{ comment.id }}">
                         <p>{{ comment.content }}</p>
                         <p><em>by {{ comment.username }} on {{ comment.timestamp.strftime('%Y-%m-%d %H:%M') }}</em></p>
+                        {% if session.get('username') == comment.username %}
+                            <button class="delete-comment-button" data-comment-id="{{ comment.id }}">Delete</button>
+                        {% endif %}
                     </li>
                 {% endfor %}
             {% else %}

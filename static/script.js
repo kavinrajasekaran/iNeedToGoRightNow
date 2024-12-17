@@ -515,8 +515,38 @@ function openBathroomSideView(name, address, rating, placeId) {
                     submitCode(placeId);
                 });
             }
+
+            // Add event listeners for delete buttons
+            addDeleteButtonListeners();
         })
         .catch(error => console.error('Error loading side view:', error));
+}
+
+// Function to add event listeners for delete buttons
+function addDeleteButtonListeners() {
+    // Delete Comment Buttons
+    const deleteCommentButtons = document.querySelectorAll('.delete-comment-button');
+    deleteCommentButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent triggering parent click events
+            const commentId = button.getAttribute('data-comment-id');
+            if (confirm('Are you sure you want to delete this comment?')) {
+                deleteComment(commentId);
+            }
+        });
+    });
+
+    // Delete Code Buttons
+    const deleteCodeButtons = document.querySelectorAll('.delete-code-button');
+    deleteCodeButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent triggering parent click events
+            const codeId = button.getAttribute('data-code-id');
+            if (confirm('Are you sure you want to delete this bathroom code?')) {
+                deleteCode(codeId);
+            }
+        });
+    });
 }
 
 // Function to submit a new comment via AJAX
@@ -589,4 +619,67 @@ function submitCode(placeId) {
         }
     })
     .catch(error => console.error('Error submitting bathroom code:', error));
+}
+
+// Function to delete a comment via AJAX
+function deleteComment(commentId) {
+    fetch('/delete_comment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ comment_id: commentId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the comment from the DOM
+            const commentElement = document.getElementById(`comment-${commentId}`);
+            if (commentElement) {
+                commentElement.remove();
+            }
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error deleting comment:', error));
+}
+
+// Function to delete a bathroom code via AJAX
+function deleteCode(codeId) {
+    fetch('/delete_code', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ code_id: codeId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the code from the DOM
+            const codeElement = document.getElementById(`code-${codeId}`);
+            if (codeElement) {
+                codeElement.remove();
+            }
+
+            // Update the codeCache if necessary
+            // Optionally, you might want to fetch the latest code again
+            // For simplicity, we'll set it to "Unknown" here
+            const placeId = currentOpenMarker.place_id;
+            codeCache.set(placeId, "Unknown");
+
+            // Update the info window if it's open for this marker
+            if (currentInfoWindow && currentOpenMarker && currentOpenMarker.place_id === placeId) {
+                const content = infoWindowText(currentOpenMarker, "Unknown");
+                infowindow.setContent(content);
+            }
+
+            // Update the sidebar to reflect the deletion
+            updateSidebar();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error deleting bathroom code:', error));
 }

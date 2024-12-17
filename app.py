@@ -186,5 +186,57 @@ def get_top_code_endpoint(place_id):
 
     return jsonify({'code': top_code})
 
+@app.route('/delete_comment', methods=['POST'])
+def delete_comment():
+    if 'username' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+
+    data = request.get_json()
+    comment_id = data.get('comment_id')
+
+    if not comment_id:
+        return jsonify({'success': False, 'message': 'Invalid data.'}), 400
+
+    # Fetch the comment
+    comment = db_session.query(Comment).filter_by(id=comment_id).first()
+    if not comment:
+        return jsonify({'success': False, 'message': 'Comment not found.'}), 404
+
+    # Check if the current user is the owner
+    if comment.username != session['username']:
+        return jsonify({'success': False, 'message': 'Unauthorized action.'}), 403
+
+    # Delete the comment
+    db_session.delete(comment)
+    db_session.commit()
+
+    return jsonify({'success': True, 'message': 'Comment deleted successfully.'})
+
+@app.route('/delete_code', methods=['POST'])
+def delete_code():
+    if 'username' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+
+    data = request.get_json()
+    code_id = data.get('code_id')
+
+    if not code_id:
+        return jsonify({'success': False, 'message': 'Invalid data.'}), 400
+
+    # Fetch the bathroom code
+    code = db_session.query(BathroomCode).filter_by(id=code_id).first()
+    if not code:
+        return jsonify({'success': False, 'message': 'Bathroom code not found.'}), 404
+
+    # Check if the current user is the owner
+    if code.username != session['username']:
+        return jsonify({'success': False, 'message': 'Unauthorized action.'}), 403
+
+    # Delete the bathroom code
+    db_session.delete(code)
+    db_session.commit()
+
+    return jsonify({'success': True, 'message': 'Bathroom code deleted successfully.'})
+
 if __name__ == '__main__':
     app.run(debug=True)
