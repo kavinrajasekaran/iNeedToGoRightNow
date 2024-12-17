@@ -370,6 +370,9 @@ body {
     margin: 5px 0;
     color: #444;
     font-size: 14px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
 }
 
 /* Emphasized text within list items */

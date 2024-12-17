@@ -49,7 +49,7 @@ class BathroomCode(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(50), ForeignKey('users.username'), nullable=False)
     place_id = Column(String(100), ForeignKey('bathrooms.place_id'), nullable=False)
-    code = Column(String(50), nullable=False)
+    code = Column(String(16), nullable=False)
     timestamp = Column(DateTime, nullable=False)
 
     user = relationship('User', back_populates='bathroom_codes')

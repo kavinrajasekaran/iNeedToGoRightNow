@@ -33,7 +33,7 @@
             <form id="addCodeForm">
                 <h4>Add a Bathroom Code</h4>
                 <label for="code">Code:</label>
-                <input type="text" id="code" name="code" required>
+                <input type="text" id="code" name="code" maxlength="16" required>
                 <button type="submit">Submit Code</button>
             </form>
         {% else %}
@@ -65,11 +65,12 @@
         {% if session.get('username') %}
             <form id="addCommentForm">
                 <h4>Add a Comment</h4>
-                <textarea id="comment" name="comment" rows="3" required></textarea>
+                <textarea id="comment" name="comment" rows="3" maxlength="10000" required></textarea>
                 <button type="submit">Submit Comment</button>
             </form>
         {% else %}
             <p><em>Log in to add comments.</em></p>
         {% endif %}
     </div>
+    <br>
 </div>

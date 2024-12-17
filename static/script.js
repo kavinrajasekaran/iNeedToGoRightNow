@@ -397,7 +397,7 @@ function updateSidebar() {
             distance.innerHTML = `<strong>Distance:</strong> ${bathroom.distance.toFixed(0)} meters`;
 
             const code = document.createElement('p');
-            code.innerHTML = `<strong>Latest Code:</strong> ${bathroom.code}`;
+            code.innerHTML = `<strong>Latest Code:</strong> ${sanitizeString(bathroom.code)}`;
 
             li.appendChild(name);
             li.appendChild(distance);
@@ -457,7 +457,7 @@ function infoWindowText(marker, savedCode) {
     `;
 
     if (savedCode) {
-        content += `<p><strong>Latest Code:</strong> ${savedCode}</p></div>`;
+        content += `<p><strong>Latest Code:</strong> ${sanitizeString(savedCode)}</p></div>`;
     } else {
         content += `<p><strong>Latest Code:</strong> Unknown</p></div>`;
     }
@@ -682,4 +682,21 @@ function deleteCode(codeId) {
         }
     })
     .catch(error => console.error('Error deleting bathroom code:', error));
+}
+
+function sanitizeString(input) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+        '/': '&#x2F;'
+    };
+
+    const truncatedInput = input.slice(0, 16);
+
+    return truncatedInput.replace(/[&<>"'/]/g, function(char) {
+        return map[char];
+    });
 }
