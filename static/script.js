@@ -19,11 +19,13 @@ const codeCache = new Map();
 const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
 
 // Minimum zoom level to perform bathroom search
-const MIN_ZOOM_LEVEL = 14;
+const MIN_ZOOM_LEVEL = 15;
+
+const DEFAULT_ZOOM = 16;
 
 // Thresholds set for minimal API usage
-const MIN_DISTANCE_THRESHOLD = 250;
-const SEARCH_RADIUS = 1500;
+const MIN_DISTANCE_THRESHOLD = 100;
+const SEARCH_RADIUS = 500;
 
 // Default Location (San Francisco Bay Area)
 const DEFAULT_LOCATION = { lat: 37.7749, lng: -122.4194 };
@@ -57,7 +59,7 @@ function initializeMap(location) {
     // Create the map centered on the specified location
     map = new google.maps.Map(document.getElementById("map"), {
         center: location,
-        zoom: 14,
+        zoom: DEFAULT_ZOOM,
         streetViewControl: false, // Remove street view control
     });
 
@@ -133,7 +135,7 @@ function getMyLocation() {
                     lng: position.coords.longitude
                 };
                 map.setCenter(userLocation);
-                map.setZoom(14);
+                map.setZoom(DEFAULT_ZOOM);
 
                 // Update the current location marker
                 addCurrentLocationMarker(userLocation);
@@ -432,7 +434,7 @@ function updateSidebar() {
                 
                 // Center the map on the marker
                 map.setCenter(bathroom.marker.getPosition());
-                map.setZoom(16);
+                map.setZoom(DEFAULT_ZOOM);
 
                 // Open the info window for the selected marker
                 const content = infoWindowText(bathroom.marker, bathroom.code);
