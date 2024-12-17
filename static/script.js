@@ -70,9 +70,6 @@ function initializeMap(location) {
     // Setup POI control buttons
     setupPOIControls();
 
-    // Perform an initial bathroom search (not needed)
-    // searchBathrooms();
-
     // Add event listener to search for bathrooms when the map becomes idle after movement
     map.addListener("idle", handleMapIdle);
 }
@@ -572,8 +569,21 @@ function submitCode(placeId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            // Update the codeCache with the new code
+            codeCache.set(placeId, code);
+
             // Reload the side view to show the new code
             openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating, currentOpenMarker.place_id);
+
+            // Update the sidebar to reflect the new code
+            updateSidebar();
+
+            // Update the info window if it's open for this marker
+            if (currentInfoWindow && currentOpenMarker && currentOpenMarker.place_id === placeId) {
+                const content = infoWindowText(currentOpenMarker, code);
+                infowindow.setContent(content);
+            }
+
         } else {
             alert(data.message);
         }
