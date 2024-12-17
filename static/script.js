@@ -518,6 +518,9 @@ function openBathroomSideView(name, address, rating, placeId) {
 
             // Add event listeners for delete buttons
             addDeleteButtonListeners();
+
+            // Add event listeners for vote buttons
+            addVoteButtonListeners();
         })
         .catch(error => console.error('Error loading side view:', error));
 }
@@ -545,6 +548,27 @@ function addDeleteButtonListeners() {
             if (confirm('Are you sure you want to delete this bathroom code?')) {
                 deleteCode(codeId);
             }
+        });
+    });
+}
+
+// Function to add event listeners for vote buttons
+function addVoteButtonListeners() {
+    const upvoteButtons = document.querySelectorAll('.upvote-button');
+    upvoteButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const codeId = button.getAttribute('data-code-id');
+            voteOnCode(codeId, 'upvote');
+        });
+    });
+
+    const downvoteButtons = document.querySelectorAll('.downvote-button');
+    downvoteButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const codeId = button.getAttribute('data-code-id');
+            voteOnCode(codeId, 'downvote');
         });
     });
 }
@@ -682,6 +706,49 @@ function deleteCode(codeId) {
         }
     })
     .catch(error => console.error('Error deleting bathroom code:', error));
+}
+
+// Function to handle voting on a bathroom code via AJAX
+function voteOnCode(codeId, voteType) {
+    fetch('/vote_code', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ code_id: codeId, vote_type: voteType })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the vote counts in the UI
+            const codeElement = document.getElementById(`code-${codeId}`);
+            if (codeElement) {
+                const upvoteCountSpan = codeElement.querySelector('.upvote-count');
+                const downvoteCountSpan = codeElement.querySelector('.downvote-count');
+
+                upvoteCountSpan.textContent = data.upvotes;
+                downvoteCountSpan.textContent = data.downvotes;
+
+                // Update the button styles based on user's current vote
+                const upvoteButton = codeElement.querySelector('.upvote-button');
+                const downvoteButton = codeElement.querySelector('.downvote-button');
+
+                if (data.current_user_vote === 'upvote') {
+                    upvoteButton.classList.add('voted');
+                    downvoteButton.classList.remove('voted');
+                } else if (data.current_user_vote === 'downvote') {
+                    downvoteButton.classList.add('voted');
+                    upvoteButton.classList.remove('voted');
+                } else {
+                    upvoteButton.classList.remove('voted');
+                    downvoteButton.classList.remove('voted');
+                }
+            }
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error voting on code:', error));
 }
 
 function sanitizeString(input) {

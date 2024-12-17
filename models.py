@@ -13,6 +13,7 @@ class User(Base):
 
     comments = relationship('Comment', back_populates='user', cascade="all, delete-orphan")
     bathroom_codes = relationship('BathroomCode', back_populates='user', cascade="all, delete-orphan")
+    bathroom_code_votes = relationship('BathroomCodeVote', back_populates='user', cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(username='{self.username}')>"
@@ -54,6 +55,22 @@ class BathroomCode(Base):
 
     user = relationship('User', back_populates='bathroom_codes')
     bathroom = relationship('Bathroom', back_populates='bathroom_codes')
+    votes = relationship('BathroomCodeVote', back_populates='bathroom_code', cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<BathroomCode(id={self.id}, user='{self.username}', bathroom='{self.place_id}')>"
+
+class BathroomCodeVote(Base):
+    __tablename__ = 'bathroom_code_votes'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code_id = Column(Integer, ForeignKey('bathroom_codes.id'), nullable=False)
+    username = Column(String(50), ForeignKey('users.username'), nullable=False)
+    vote_type = Column(String(10), nullable=False)  # 'upvote' or 'downvote'
+    timestamp = Column(DateTime, nullable=False)
+
+    user = relationship('User', back_populates='bathroom_code_votes')
+    bathroom_code = relationship('BathroomCode', back_populates='votes')
+
+    def __repr__(self):
+        return f"<BathroomCodeVote(id={self.id}, code_id={self.code_id}, user='{self.username}', vote_type='{self.vote_type}')>"

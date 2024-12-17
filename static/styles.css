@@ -452,3 +452,44 @@ body {
 .delete-code-button:hover {
     background-color: #c0392b; /* Darker red on hover */
 }
+
+/* Voting Section Styles */
+.voting-section {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.vote-button {
+    background-color: #f0f0f0;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.vote-button:hover {
+    background-color: #e0e0e0;
+}
+
+.vote-button.voted {
+    background-color: #4285F4;
+    color: #fff;
+}
+
+.vote-button.voted.upvote-button {
+    background-color: #34A853; /* Green for upvote */
+}
+
+.vote-button.voted.downvote-button {
+    background-color: #EA4335; /* Red for downvote */
+}
+
+.vote-button span {
+    font-weight: bold;
+}

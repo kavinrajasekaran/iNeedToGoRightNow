@@ -19,6 +19,13 @@
                     <li id="code-{{ code.id }}">
                         <p><strong>Code:</strong> {{ code.code }}</p>
                         <p><em>Submitted by {{ code.username }} on {{ code.timestamp.strftime('%Y-%m-%d %H:%M') }}</em></p>
+                        
+                        <!-- Voting Section -->
+                        <div class="voting-section">
+                            <button class="vote-button upvote-button {% if code.user_vote == 'upvote' %}voted{% endif %}" data-code-id="{{ code.id }}" data-vote-type="upvote">👍 <span class="upvote-count">{{ code.upvotes }}</span></button>
+                            <button class="vote-button downvote-button {% if code.user_vote == 'downvote' %}voted{% endif %}" data-code-id="{{ code.id }}" data-vote-type="downvote">👎 <span class="downvote-count">{{ code.downvotes }}</span></button>
+                        </div>
+
                         {% if session.get('username') == code.username %}
                             <button class="delete-code-button" data-code-id="{{ code.id }}">Delete</button>
                         {% endif %}
@@ -74,3 +81,32 @@
     </div>
     <br>
 </div>
+
+<script>
+// Wait for the DOM to load before adding event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Function to add event listeners to vote buttons
+    function addVoteButtonListeners() {
+        const upvoteButtons = document.querySelectorAll('.upvote-button');
+        upvoteButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const codeId = button.getAttribute('data-code-id');
+                voteOnCode(codeId, 'upvote');
+            });
+        });
+
+        const downvoteButtons = document.querySelectorAll('.downvote-button');
+        downvoteButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const codeId = button.getAttribute('data-code-id');
+                voteOnCode(codeId, 'downvote');
+            });
+        });
+    }
+
+    // Initialize vote button listeners
+    addVoteButtonListeners();
+});
+</script>

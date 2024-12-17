@@ -3,7 +3,7 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import Base, User, Bathroom, Comment, BathroomCode
+from models import Base, User, Bathroom, Comment, BathroomCode, BathroomCodeVote
 from datetime import datetime
 from app import hash_password
 

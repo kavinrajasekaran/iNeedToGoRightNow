@@ -1,9 +1,9 @@
 # app.py
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from sqlalchemy import create_engine, and_
+from sqlalchemy import create_engine, and_, func
 from sqlalchemy.orm import sessionmaker
-from models import Base, User, Bathroom, Comment, BathroomCode
+from models import Base, User, Bathroom, Comment, BathroomCode, BathroomCodeVote
 import hashlib, binascii, os
 from datetime import datetime
 
@@ -109,7 +109,27 @@ def bathroom_side_view():
     comments = db_session.query(Comment).filter_by(place_id=place_id).order_by(Comment.timestamp.desc()).all()
     codes = db_session.query(BathroomCode).filter_by(place_id=place_id).order_by(BathroomCode.timestamp.desc()).all()
 
-    return render_template('bathroom_side_view.html', name=name, address=address, rating=rating, place_id=place_id, comments=comments, codes=codes)
+    # For each code, fetch upvote and downvote counts
+    code_data = []
+    for code in codes:
+        upvotes = db_session.query(func.count(BathroomCodeVote.id)).filter_by(code_id=code.id, vote_type='upvote').scalar()
+        downvotes = db_session.query(func.count(BathroomCodeVote.id)).filter_by(code_id=code.id, vote_type='downvote').scalar()
+        user_vote = None
+        if 'username' in session:
+            user_vote = db_session.query(BathroomCodeVote).filter_by(code_id=code.id, username=session['username']).first()
+            if user_vote:
+                user_vote = user_vote.vote_type
+        code_data.append({
+            'id': code.id,
+            'code': code.code,
+            'username': code.username,
+            'timestamp': code.timestamp,
+            'upvotes': upvotes,
+            'downvotes': downvotes,
+            'user_vote': user_vote
+        })
+
+    return render_template('bathroom_side_view.html', name=name, address=address, rating=rating, place_id=place_id, comments=comments, codes=code_data)
 
 @app.route('/add_comment', methods=['POST'])
 def add_comment():
@@ -237,6 +257,67 @@ def delete_code():
     db_session.commit()
 
     return jsonify({'success': True, 'message': 'Bathroom code deleted successfully.'})
+
+# New Route to Handle Voting
+@app.route('/vote_code', methods=['POST'])
+def vote_code():
+    if 'username' not in session:
+        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+
+    data = request.get_json()
+    code_id = data.get('code_id')
+    vote_type = data.get('vote_type')  # 'upvote' or 'downvote'
+
+    if not code_id or vote_type not in ['upvote', 'downvote']:
+        return jsonify({'success': False, 'message': 'Invalid data.'}), 400
+
+    # Fetch the bathroom code
+    code = db_session.query(BathroomCode).filter_by(id=code_id).first()
+    if not code:
+        return jsonify({'success': False, 'message': 'Bathroom code not found.'}), 404
+
+    # Check if the user has already voted on this code
+    existing_vote = db_session.query(BathroomCodeVote).filter_by(code_id=code_id, username=session['username']).first()
+
+    if existing_vote:
+        if existing_vote.vote_type == vote_type:
+            # If the same vote type is sent, remove the vote (toggle)
+            db_session.delete(existing_vote)
+            db_session.commit()
+            message = f"{vote_type.capitalize()} removed."
+        else:
+            # Update the vote type
+            existing_vote.vote_type = vote_type
+            existing_vote.timestamp = datetime.utcnow()
+            db_session.commit()
+            message = f"Vote changed to {vote_type}."
+    else:
+        # Create a new vote
+        new_vote = BathroomCodeVote(
+            code_id=code_id,
+            username=session['username'],
+            vote_type=vote_type,
+            timestamp=datetime.utcnow()
+        )
+        db_session.add(new_vote)
+        db_session.commit()
+        message = f"{vote_type.capitalize()} added."
+
+    # Fetch updated vote counts
+    upvotes = db_session.query(func.count(BathroomCodeVote.id)).filter_by(code_id=code_id, vote_type='upvote').scalar()
+    downvotes = db_session.query(func.count(BathroomCodeVote.id)).filter_by(code_id=code_id, vote_type='downvote').scalar()
+
+    # Check if the user has a current vote
+    user_vote = db_session.query(BathroomCodeVote).filter_by(code_id=code_id, username=session['username']).first()
+    current_user_vote = user_vote.vote_type if user_vote else None
+
+    return jsonify({
+        'success': True,
+        'message': message,
+        'upvotes': upvotes,
+        'downvotes': downvotes,
+        'current_user_vote': current_user_vote
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
