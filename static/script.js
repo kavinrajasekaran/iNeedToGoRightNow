@@ -397,7 +397,7 @@ function updateSidebar() {
             distance.innerHTML = `<strong>Distance:</strong> ${bathroom.distance.toFixed(0)} meters`;
 
             const code = document.createElement('p');
-            code.innerHTML = `<strong>Code:</strong> ${bathroom.code}`;
+            code.innerHTML = `<strong>Latest Code:</strong> ${bathroom.code}`;
 
             li.appendChild(name);
             li.appendChild(distance);
@@ -437,13 +437,13 @@ function getTopCode(placeId) {
     return fetch(`/get_top_code/${placeId}`)
         .then(response => response.json())
         .then(data => {
-            const code = data.code || "unknown";
+            const code = data.code || "Unknown";
             codeCache.set(placeId, code);
             return code;
         })
         .catch(error => {
             console.error('Error fetching top code:', error);
-            return "unknown";
+            return "Unknown";
         });
 }
 
@@ -452,14 +452,14 @@ function infoWindowText(marker, savedCode) {
     let content = `
         <div class="info-window">
             <h3>${marker.title}</h3>
-            <p>${marker.vicinity}</p>
+            <p><strong>Address:</strong> ${marker.vicinity}</p>
             ${marker.rating ? `<p><strong>Rating:</strong> ${marker.rating} ⭐</p>` : ''}
     `;
 
     if (savedCode) {
-        content += `<p><strong>Code:</strong> ${savedCode}</p></div>`;
+        content += `<p><strong>Latest Code:</strong> ${savedCode}</p></div>`;
     } else {
-        content += `<p><strong>Code:</strong> unknown</p></div>`;
+        content += `<p><strong>Latest Code:</strong> Unknown</p></div>`;
     }
 
     return content;

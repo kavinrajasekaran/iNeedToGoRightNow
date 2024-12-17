@@ -4,7 +4,9 @@
     <button id="close-side-view" class="close-button">&times;</button>
     <h2 class="sidebar-title">{{ name }}</h2>
     <p><strong>Address:</strong> {{ address }}</p>
+    {% if rating != 'null' %}
     <p><strong>Rating:</strong> {{ rating }} ⭐</p>
+    {% endif %}
 
     <hr>
 

@@ -182,7 +182,7 @@ def get_top_code_endpoint(place_id):
         .first()
     )
 
-    top_code = recent_code.code if recent_code else "unknown"
+    top_code = recent_code.code if recent_code else "Unknown"
 
     return jsonify({'code': top_code})
 
