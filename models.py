@@ -50,22 +50,10 @@ class BathroomCode(Base):
     username = Column(String(50), ForeignKey('users.username'), nullable=False)
     place_id = Column(String(100), ForeignKey('bathrooms.place_id'), nullable=False)
     code = Column(String(50), nullable=False)
-    works_or_not = Column(Boolean, nullable=False)
     timestamp = Column(DateTime, nullable=False)
 
     user = relationship('User', back_populates='bathroom_codes')
     bathroom = relationship('Bathroom', back_populates='bathroom_codes')
 
     def __repr__(self):
-        return f"<BathroomCode(id={self.id}, user='{self.username}', bathroom='{self.place_id}', works={self.works_or_not})>"
-
-class AuthToken(Base):
-    __tablename__ = 'auth_tokens'
-
-    token_id = Column(String(64), primary_key=True)
-    username = Column(String(50), ForeignKey('users.username'), nullable=False)
-
-    user = relationship('User', backref='auth_tokens')
-
-    def __repr__(self):
-        return f"<AuthToken(token_id='{self.token_id}', username='{self.username}')>"
+        return f"<BathroomCode(id={self.id}, user='{self.username}', bathroom='{self.place_id}')>"

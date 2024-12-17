@@ -1,0 +1,69 @@
+<!-- templates/bathroom_side_view.html -->
+
+<div class="side-view-container">
+    <button id="close-side-view" class="close-button">&times;</button>
+    <h2 class="sidebar-title">{{ name }}</h2>
+    <p><strong>Address:</strong> {{ address }}</p>
+    {% if rating != 'null' %}
+    <p><strong>Rating:</strong> {{ rating }} ⭐</p>
+    {% endif %}
+
+    <hr>
+
+    <!-- Bathroom Codes Section -->
+    <div class="section">
+        <h3>Bathroom Codes</h3>
+        <ul id="codeList">
+            {% if codes %}
+                {% for code in codes %}
+                    <li>
+                        <p><strong>Code:</strong> {{ code.code }}</p>
+                        <p><em>Submitted by {{ code.username }} on {{ code.timestamp.strftime('%Y-%m-%d %H:%M') }}</em></p>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <li>No codes available for this bathroom.</li>
+            {% endif %}
+        </ul>
+
+        {% if session.get('username') %}
+            <form id="addCodeForm">
+                <h4>Add a Bathroom Code</h4>
+                <label for="code">Code:</label>
+                <input type="text" id="code" name="code" required>
+                <button type="submit">Submit Code</button>
+            </form>
+        {% else %}
+            <p><em>Log in to add bathroom codes.</em></p>
+        {% endif %}
+    </div>
+
+    <hr>
+
+    <!-- Comments Section -->
+    <div class="section">
+        <h3>Comments</h3>
+        <ul id="commentList">
+            {% if comments %}
+                {% for comment in comments %}
+                    <li>
+                        <p>{{ comment.content }}</p>
+                        <p><em>by {{ comment.username }} on {{ comment.timestamp.strftime('%Y-%m-%d %H:%M') }}</em></p>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <li>No comments yet for this bathroom.</li>
+            {% endif %}
+        </ul>
+
+        {% if session.get('username') %}
+            <form id="addCommentForm">
+                <h4>Add a Comment</h4>
+                <textarea id="comment" name="comment" rows="3" required></textarea>
+                <button type="submit">Submit Comment</button>
+            </form>
+        {% else %}
+            <p><em>Log in to add comments.</em></p>
+        {% endif %}
+    </div>
+</div>

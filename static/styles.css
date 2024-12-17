@@ -10,7 +10,10 @@
 /* Ensure the html and body take full height */
 html, body {
     height: 100%;
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: rgb(221, 220, 220);
+    background: url("map6.png") no-repeat center center fixed;
+    background-size: cover;
 }
 
 /* Body as a flex container in column direction */
@@ -24,21 +27,33 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #4285F4;
+    background-color: rgba(210, 203, 188, 0.5);
+    box-shadow: 2px 2px 12px rgba(109, 109, 109, 0.7);
     color: #fff;
     padding: 10px 20px;
-    flex-shrink: 0; /* Prevent the navbar from shrinking */
+    flex-shrink: 0; 
+}
+
+.logo {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    width: 100px;     
+    height: auto;      
+    max-width: 100%;      
 }
 
 .nav-brand {
-    color: #fff;
+    color: black;
     text-decoration: none;
     font-weight: bold;
     font-size: 20px;
 }
 
 .nav-right a {
-    color: #fff;
+    color: black;
     margin-left: 15px;
     text-decoration: none;
     font-size: 16px;
@@ -46,6 +61,7 @@ body {
 
 .nav-user {
     margin-right: 15px;
+    color:black;
 }
 
 .nav-right a:hover {
@@ -54,13 +70,12 @@ body {
 
 /* Flash messages */
 .flash-messages {
-    padding: 10px 20px;
     flex-shrink: 0; /* Prevent flash messages from shrinking */
 }
 
 .flash-message {
     padding: 10px;
-    margin-bottom: 10px;
+    margin: 10px;
     border-radius: 3px;
 }
 
@@ -79,11 +94,10 @@ body {
     color: #004085;
 }
 
-/* Main content should flex to fill the remaining space */
 .main-content {
     flex: 1 1 auto;
     display: flex;
-    height: 0; /* Necessary for Flexbox to calculate correctly */
+    height: 0;
 }
 
 /* Container to hold map and sidebar */
@@ -124,7 +138,7 @@ body {
     margin-bottom: 10px;
     padding: 15px;
     border: 1px solid #ddd;
-    border-radius: 5px;
+    border-radius: 10px;
     transition: all 0.3s ease;
     cursor: pointer;
     position: relative;
@@ -147,37 +161,6 @@ body {
 #bathroomList li .code {
     font-weight: bold;
     color: #4285F4;
-}
-
-/* Expanded Sidebar Item */
-#bathroomList li.expanded {
-    background-color: #e9f5ff;
-    padding-bottom: 20px;
-}
-
-#bathroomList li.expanded .code-input {
-    margin-top: 10px;
-}
-
-#bathroomList li.expanded input[type="text"] {
-    width: 80%;
-    padding: 8px;
-    margin-right: 5px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-}
-
-#bathroomList li.expanded button.save-code {
-    padding: 8px 12px;
-    background-color: #4285F4;
-    color: white;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-}
-
-#bathroomList li.expanded button.save-code:hover {
-    background-color: #357ae8;
 }
 
 /* POI Control Buttons */
@@ -250,11 +233,12 @@ body {
 .form-container {
     max-width: 400px;
     margin: 50px auto;
-    background: #f9f9f9;
+    background: #ffffff;
     padding: 20px;
     border: 1px solid #ddd;
-    border-radius: 5px;
-    flex: 1; /* Allow forms to grow if necessary */
+    border-radius: 10px;
+    flex: 1; 
+    box-shadow: 2px 2px 12px rgba(109, 109, 109, 0.7);
 }
 
 .form-container h2 {
@@ -272,22 +256,23 @@ body {
     padding: 8px;
     box-sizing: border-box;
     border: 1px solid #ccc;
-    border-radius: 3px;
+    border-radius: 10px;
 }
 
 .btn-submit {
     width: 100%;
     padding: 10px;
     border: none;
-    background-color: #4285F4;
+    background-color: black;
     color: #fff;
     font-size: 16px;
     border-radius: 3px;
     cursor: pointer;
+    border-radius: 10px;
 }
 
 .btn-submit:hover {
-    background-color: #357ae8;
+    background-color: rgb(52, 52, 52);
 }
 
 /* Ensure that the container and its children do not exceed available space */
@@ -295,35 +280,138 @@ body {
     min-height: 0; /* Prevent overflow caused by child elements */
 }
 
-/* Additional Styles for Expanded Sidebar Interaction */
-
-/* Highlight selected sidebar item */
-#bathroomList li.selected {
-    border-color: #4285F4;
-    background-color: #e6f0ff;
+.sidebar-title {
+    margin-bottom: 10px;
 }
 
-/* Input and button alignment in expanded view */
-#bathroomList li .code-input {
+/* Close button styles */
+#close-side-view {
+    position: absolute; /* Positioned relative to the container */
+    top: 0px; /* Adjust to match container padding */
+    right: 0px; /* Adjust to match container padding */
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background-color: #ddd; /* Light background color */
+    color: #333; /* Text color for the '×' */
+    font-size: 18px;
+    font-weight: bold;
     display: flex;
     align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* Hover and active states */
+#close-side-view:hover {
+    background-color: #bbb; /* Darker background on hover */
+    color: #000; /* Darker text color on hover */
+}
+
+#close-side-view:active {
+    background-color: #999; /* Even darker on click */
+    color: #000; /* Keep text dark */
+}
+
+/* Container for the entire side view */
+.side-view-container {
+    position: relative;
+    overflow-y: auto;
+    height: 100%;
+    background-color: #f9f9f9;
+    font-family: Arial, sans-serif;
+}
+
+/* Section headers */
+.side-view-container .section-header {
+    margin-bottom: 10px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 5px;
+    font-size: 20px;
+    color: #555;
+}
+
+/* Lists within sections */
+.side-view-container ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+/* List items */
+.side-view-container li {
+    background-color: #fff;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+/* Paragraphs within list items */
+.side-view-container li p {
+    margin: 5px 0;
+    color: #444;
+    font-size: 14px;
+}
+
+/* Emphasized text within list items */
+.side-view-container li p em {
+    color: #777;
+    font-size: 12px;
+}
+
+/* Forms within sections */
+.side-view-container form {
+    display: flex;
+    flex-direction: column;
     margin-top: 10px;
 }
 
-#bathroomList li .code-input input[type="text"] {
-    flex: 1;
+/* Labels within forms */
+.side-view-container form label {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #333;
 }
 
-#bathroomList li .code-input button.save-code {
-    flex: none;
+/* Input fields, textareas, and selects within forms */
+.side-view-container form input,
+.side-view-container form textarea,
+.side-view-container form select {
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-/* Smooth transition for expanding and collapsing */
-#bathroomList li {
-    transition: all 0.3s ease;
+/* Submit buttons within forms */
+.side-view-container form button {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #4285F4;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    align-self: flex-start;
 }
 
-/* Ensure expanded content doesn't overflow */
-#bathroomList li.expanded {
-    overflow: hidden;
+.side-view-container form button:hover {
+    background-color: #357ae8;
+}
+
+/* Horizontal rule */
+.side-view-container hr {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 20px 0;
+}
+
+.side-view-container h3 {
+    margin-bottom: 8px;
 }

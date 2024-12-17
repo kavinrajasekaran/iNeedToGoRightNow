@@ -7,8 +7,13 @@ let bathroomMarkers = [];
 let pagination = null;
 let currentLocationMarker = null;
 let loadedPlaceIds = new Set();
-let selectedMarker = null; // Global variable to track the selected marker
 let lastSearchCenter = null;
+let currentInfoWindow = null;
+let bathroomSideViewOpen = false;
+let currentOpenMarker = null;
+
+// Cache for storing fetched codes
+const codeCache = new Map();
 
 // API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
@@ -16,8 +21,8 @@ const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
 // Minimum zoom level to perform bathroom search
 const MIN_ZOOM_LEVEL = 14;
 
-// Thresholds set for minimal api usage
-const MIN_DISTANCE_THRESHOLD = 1000;
+// Thresholds set for minimal API usage
+const MIN_DISTANCE_THRESHOLD = 500;
 const SEARCH_RADIUS = 1000;
 
 // Default Location (San Francisco Bay Area)
@@ -64,9 +69,6 @@ function initializeMap(location) {
 
     // Setup POI control buttons
     setupPOIControls();
-
-    // Perform an initial bathroom search (not needed)
-    // searchBathrooms();
 
     // Add event listener to search for bathrooms when the map becomes idle after movement
     map.addListener("idle", handleMapIdle);
@@ -280,56 +282,21 @@ function createBathroomMarker(place) {
 
     // Marker click event
     marker.addListener("click", () => {
-        selectedMarker = marker;
-        updateSidebar(); // Refresh sidebar to show selected at top with expanded view
+        getTopCode(place.place_id).then(savedCode => {
+            // Show info window with code information
+            const content = infoWindowText(marker, savedCode);
+            infowindow.setContent(content);
+            infowindow.open(map, marker);
+            currentInfoWindow = infowindow;
 
-        // Show info window if code is known
-        const placeId = marker.place_id;
-        const savedCode = localStorage.getItem(`code_${placeId}`);
+            google.maps.event.addListener(infowindow, "closeclick", () => {
+                closeSideView();
+            });
 
-        let content = `
-            <div class="info-window">
-                <h3>${marker.title}</h3>
-                <p>${marker.vicinity}</p>
-                ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
-        `;
+            openBathroomSideView(marker.title, marker.vicinity, marker.rating, marker.place_id);
 
-        if (savedCode) {
-            content += `<p>Code: ${savedCode}</p></div>`;
-        } else {
-            content += `<p>No Code Known</p></div>`;
-        }
-
-        infowindow.setContent(content);
-        infowindow.open(map, marker);
-
-        // Add event listener for saving code in the info window
-        // setTimeout(() => {
-        //     const saveButton = document.getElementById('saveCodeButton');
-        //     if (saveButton) {
-        //         saveButton.addEventListener('click', () => {
-        //             const code = document.getElementById('codeInput').value.trim();
-        //             if (code) {
-        //                 localStorage.setItem(`code_${placeId}`, code);
-        //                 // Update info window
-        //                 const updatedContent = `
-        //                     <div class="info-window">
-        //                         <h3>${marker.title}</h3>
-        //                         <p>${marker.vicinity}</p>
-        //                         ${marker.rating ? `<p>Rating: ${marker.rating} ⭐</p>` : ''}
-        //                         ${marker.url ? `<a href="${marker.url}" target="_blank">More Info</a>` : ''}
-        //                         <hr>
-        //                         <p><strong>Code:</strong> ${code}</p>
-        //                     </div>
-        //                 `;
-        //                 infowindow.setContent(updatedContent);
-        //                 updateSidebar(); // Update sidebar as well
-        //             } else {
-        //                 alert('Please enter a code.');
-        //             }
-        //         });
-        //     }
-        // }, 100);
+            currentOpenMarker = marker;
+        });
     });
 
     bathroomMarkers.push(marker);
@@ -373,9 +340,13 @@ function isMarkerInBounds(marker) {
 }
 
 // Function to update the sidebar with the closest bathrooms and their codes
-// If a marker is selected, show it at the top with an expanded view allowing code editing
 function updateSidebar() {
     hideShowBathrooms();
+
+    if (bathroomSideViewOpen) {
+        return;
+    }
+
     const bathroomList = document.getElementById('bathroomList');
     bathroomList.innerHTML = ''; // Clear existing list
 
@@ -384,143 +355,238 @@ function updateSidebar() {
     const centerLat = center.lat();
     const centerLng = center.lng();
 
-    // Create a list of visible bathrooms (excluding the selected one if it's visible, because we'll handle selected separately)
+    // Create a list of visible bathrooms
     let visibleBathrooms = bathroomMarkers
-        .filter(marker => marker.getVisible() && marker !== selectedMarker)
+        .filter(marker => marker.getVisible())
         .map(marker => {
             const distance = computeDistance(centerLat, centerLng, marker.getPosition().lat(), marker.getPosition().lng());
-            const code = localStorage.getItem(`code_${marker.place_id}`) || 'N/A';
             return {
                 marker: marker,
                 name: marker.title,
-                code: code,
+                vicinity: marker.vicinity,
+                rating: marker.rating,
+                placeId: marker.place_id,
                 distance: distance
             };
         });
 
-    // Sort by distance
-    visibleBathrooms.sort((a, b) => a.distance - b.distance);
-
-    // If we have a selected marker, we will show it at the top
-    if (selectedMarker) {
-        const selectedCode = localStorage.getItem(`code_${selectedMarker.place_id}`);
-        const selectedItem = document.createElement('li');
-        selectedItem.classList.add('expanded-item'); // Add a class to style expanded section
-
-        // Build the expanded HTML
-        let expandedHTML = `
-            <h3>${selectedMarker.title}</h3>
-            <p><strong>Code:</strong> ${selectedCode ? selectedCode : 'N/A'}</p>
-        `;
-
-        if (selectedCode) {
-            // Show current code and an Edit button
-            expandedHTML += `
-                <button class="edit-code-btn">Edit Code</button>
-                <div class="edit-code-section" style="display:none;">
-                    <label for="sidebarCodeInput">Enter New Code:</label><br>
-                    <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
-                    <button class="save-sidebar-code-btn">Save Code</button>
-                </div>
-            `;
-        } else {
-            // No code yet, show input directly
-            expandedHTML += `
-                <div class="edit-code-section">
-                    <label for="sidebarCodeInput">Enter Code:</label><br>
-                    <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
-                    <button class="save-sidebar-code-btn">Save Code</button>
-                </div>
-            `;
-        }
-
-        selectedItem.innerHTML = expandedHTML;
-        bathroomList.appendChild(selectedItem);
-
-        // Add event listeners for editing/saving code in the sidebar
-        const editBtn = selectedItem.querySelector('.edit-code-btn');
-        const editSection = selectedItem.querySelector('.edit-code-section');
-        const saveBtn = selectedItem.querySelector('.save-sidebar-code-btn');
-
-        if (editBtn) {
-            editBtn.addEventListener('click', () => {
-                editSection.style.display = 'block';
-            });
-        }
-
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
-                const newCode = selectedItem.querySelector('#sidebarCodeInput').value.trim();
-                if (newCode) {
-                    localStorage.setItem(`code_${selectedMarker.place_id}`, newCode);
-                    // Update the displayed code
-                    const updatedHTML = `
-                        <h3>${selectedMarker.title}</h3>
-                        <p><strong>Code:</strong> ${newCode}</p>
-                        <button class="edit-code-btn">Edit Code</button>
-                        <div class="edit-code-section" style="display:none;">
-                            <label for="sidebarCodeInput">Enter New Code:</label><br>
-                            <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
-                            <button class="save-sidebar-code-btn">Save Code</button>
-                        </div>
-                    `;
-                    selectedItem.innerHTML = updatedHTML;
-
-                    // Re-attach event listeners after updating innerHTML
-                    const newEditBtn = selectedItem.querySelector('.edit-code-btn');
-                    const newEditSection = selectedItem.querySelector('.edit-code-section');
-                    const newSaveBtn = selectedItem.querySelector('.save-sidebar-code-btn');
-
-                    newEditBtn.addEventListener('click', () => {
-                        newEditSection.style.display = 'block';
-                    });
-
-                    newSaveBtn.addEventListener('click', () => {
-                        const newerCode = selectedItem.querySelector('#sidebarCodeInput').value.trim();
-                        if (newerCode) {
-                            localStorage.setItem(`code_${selectedMarker.place_id}`, newerCode);
-                            // Update again
-                            selectedItem.innerHTML = `
-                                <h3>${selectedMarker.title}</h3>
-                                <p><strong>Code:</strong> ${newerCode}</p>
-                                <button class="edit-code-btn">Edit Code</button>
-                                <div class="edit-code-section" style="display:none;">
-                                    <label for="sidebarCodeInput">Enter New Code:</label><br>
-                                    <input type="text" id="sidebarCodeInput" placeholder="Enter code here"><br>
-                                    <button class="save-sidebar-code-btn">Save Code</button>
-                                </div>
-                            `;
-                            // Re-bind if needed, but at this point we have a stable structure.
-                            // In a real scenario, you might refactor to a function for DRYness.
-                        } else {
-                            alert('Please enter a code.');
-                        }
-                    });
-                } else {
-                    alert('Please enter a code.');
-                }
-            });
-        }
-    }
-
-    // Add the rest of the bathrooms after the selected one (if any)
-    if (visibleBathrooms.length === 0 && !selectedMarker) {
+    if (visibleBathrooms.length === 0) {
         const li = document.createElement('li');
         li.textContent = 'No bathrooms found within the current view.';
         bathroomList.appendChild(li);
         return;
     }
 
-    visibleBathrooms.forEach(bathroom => {
-        const li = document.createElement('li');
-        const name = document.createElement('h3');
-        name.textContent = bathroom.name;
+    // For each bathroom, fetch the code
+    Promise.all(visibleBathrooms.map(bathroom => {
+        return getTopCode(bathroom.placeId).then(code => {
+            bathroom.code = code;
+            return bathroom;
+        });
+    })).then(bathroomsWithCodes => {
+        // Sort by distance
+        bathroomsWithCodes.sort((a, b) => a.distance - b.distance);
 
-        const code = document.createElement('p');
-        code.innerHTML = `<strong>Code:</strong> <span class="code">${bathroom.code}</span>`;
+        bathroomsWithCodes.forEach(bathroom => {
+            const li = document.createElement('li');
 
-        li.appendChild(name);
-        li.appendChild(code);
-        bathroomList.appendChild(li);
-    });
+            const name = document.createElement('h3');
+            name.textContent = bathroom.name;
+
+            const distance = document.createElement('p');
+            distance.innerHTML = `<strong>Distance:</strong> ${bathroom.distance.toFixed(0)} meters`;
+
+            const code = document.createElement('p');
+            code.innerHTML = `<strong>Latest Code:</strong> ${bathroom.code}`;
+
+            li.appendChild(name);
+            li.appendChild(distance);
+            li.appendChild(code);
+
+            li.addEventListener('click', () => {
+                currentOpenMarker = bathroom.marker;
+
+                openBathroomSideView(bathroom.marker.title, bathroom.vicinity, bathroom.rating, bathroom.placeId);
+                
+                // Center the map on the marker
+                map.setCenter(bathroom.marker.getPosition());
+                map.setZoom(16);
+
+                // Open the info window for the selected marker
+                const content = infoWindowText(bathroom.marker, bathroom.code);
+                infowindow.setContent(content);
+                infowindow.open(map, bathroom.marker);
+                currentInfoWindow = infowindow;
+
+                google.maps.event.addListener(infowindow, "closeclick", () => {
+                    closeSideView();
+                });
+            });
+
+            bathroomList.appendChild(li);
+        });
+    }).catch(error => console.error('Error updating sidebar:', error));
+}
+
+// Function to get the top code for a given placeId
+function getTopCode(placeId) {
+    if (codeCache.has(placeId)) {
+        return Promise.resolve(codeCache.get(placeId));
+    }
+
+    return fetch(`/get_top_code/${placeId}`)
+        .then(response => response.json())
+        .then(data => {
+            const code = data.code || "Unknown";
+            codeCache.set(placeId, code);
+            return code;
+        })
+        .catch(error => {
+            console.error('Error fetching top code:', error);
+            return "Unknown";
+        });
+}
+
+// Function to create the content for the info window
+function infoWindowText(marker, savedCode) {
+    let content = `
+        <div class="info-window">
+            <h3>${marker.title}</h3>
+            <p><strong>Address:</strong> ${marker.vicinity}</p>
+            ${marker.rating ? `<p><strong>Rating:</strong> ${marker.rating} ⭐</p>` : ''}
+    `;
+
+    if (savedCode) {
+        content += `<p><strong>Latest Code:</strong> ${savedCode}</p></div>`;
+    } else {
+        content += `<p><strong>Latest Code:</strong> Unknown</p></div>`;
+    }
+
+    return content;
+}
+
+function closeSideView() {
+    bathroomSideViewOpen = false;
+    currentOpenMarker = null;
+    // Fetch the rendered template from Flask
+    fetch(`/sidebar`)
+        .then(response => response.text())
+        .then(html => {
+            // Replace the content in a container element
+            const container = document.getElementById('sidebar');
+            container.innerHTML = html;
+            updateSidebar();
+
+            if (currentInfoWindow) {
+                currentInfoWindow.close();
+                currentInfoWindow = null;
+            }
+        })
+        .catch(error => console.error('Error loading side view:', error));
+}
+
+// Function to open the bathroom side view
+function openBathroomSideView(name, address, rating, placeId) {
+    bathroomSideViewOpen = true;
+    // Fetch the rendered template from Flask
+    fetch(`/bathroom_side_view?name=${encodeURIComponent(name)}&address=${encodeURIComponent(address)}&rating=${encodeURIComponent(rating)}&placeId=${placeId}`)
+        .then(response => response.text())
+        .then(html => {
+            // Replace the content in a container element
+            const container = document.getElementById('sidebar');
+            container.innerHTML = html;
+
+            // Add event listeners for the close button
+            document.getElementById('close-side-view').addEventListener('click', closeSideView);
+
+            // Add event listeners for the add comment and add code forms
+            const addCommentForm = document.getElementById('addCommentForm');
+            if (addCommentForm) {
+                addCommentForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    submitComment(placeId);
+                });
+            }
+
+            const addCodeForm = document.getElementById('addCodeForm');
+            if (addCodeForm) {
+                addCodeForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    submitCode(placeId);
+                });
+            }
+        })
+        .catch(error => console.error('Error loading side view:', error));
+}
+
+// Function to submit a new comment via AJAX
+function submitComment(placeId) {
+    const commentInput = document.getElementById('comment');
+    const content = commentInput.value.trim();
+
+    if (!content) {
+        alert('Comment cannot be empty.');
+        return;
+    }
+
+    fetch('/add_comment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ place_id: placeId, content: content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the side view to show the new comment
+            openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating, currentOpenMarker.place_id);
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error submitting comment:', error));
+}
+
+// Function to submit a new bathroom code via AJAX
+function submitCode(placeId) {
+    const codeInput = document.getElementById('code');
+
+    const code = codeInput.value.trim();
+
+    if (!code) {
+        alert('Code cannot be empty.');
+        return;
+    }
+
+    fetch('/add_code', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ place_id: placeId, code: code })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the codeCache with the new code
+            codeCache.set(placeId, code);
+
+            // Reload the side view to show the new code
+            openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating, currentOpenMarker.place_id);
+
+            // Update the sidebar to reflect the new code
+            updateSidebar();
+
+            // Update the info window if it's open for this marker
+            if (currentInfoWindow && currentOpenMarker && currentOpenMarker.place_id === placeId) {
+                const content = infoWindowText(currentOpenMarker, code);
+                infowindow.setContent(content);
+            }
+
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error submitting bathroom code:', error));
 }

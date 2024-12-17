@@ -5,6 +5,8 @@
 {% block content %}
 <div class="form-container">
     <h2>Create Account</h2>
+    <div class="box">
+        <img src="{{ url_for('static', filename='image.png') }}" alt="none" class="logo">
     <form method="POST" action="{{ url_for('create_account') }}">
         <div class="form-group">
             <label for="username">Username:</label><br>
