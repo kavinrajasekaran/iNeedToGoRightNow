@@ -81,32 +81,3 @@
     </div>
     <br>
 </div>
-
-<script>
-// Wait for the DOM to load before adding event listeners
-document.addEventListener('DOMContentLoaded', function() {
-    // Function to add event listeners to vote buttons
-    function addVoteButtonListeners() {
-        const upvoteButtons = document.querySelectorAll('.upvote-button');
-        upvoteButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                event.stopPropagation();
-                const codeId = button.getAttribute('data-code-id');
-                voteOnCode(codeId, 'upvote');
-            });
-        });
-
-        const downvoteButtons = document.querySelectorAll('.downvote-button');
-        downvoteButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                event.stopPropagation();
-                const codeId = button.getAttribute('data-code-id');
-                voteOnCode(codeId, 'downvote');
-            });
-        });
-    }
-
-    // Initialize vote button listeners
-    addVoteButtonListeners();
-});
-</script>
