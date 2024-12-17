@@ -76,7 +76,8 @@ body {
 .flash-message {
     padding: 10px;
     margin: 10px;
-    border-radius: 3px;
+    border-radius: 5px;
+    position: relative;
 }
 
 .flash-message.success {
@@ -92,6 +93,22 @@ body {
 .flash-message.info {
     background-color: #cce5ff;
     color: #004085;
+}
+
+.close-btn {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 20px;
+    font-weight: bold;
+    color: inherit;
+    cursor: pointer;
+}
+.close-btn:hover {
+    color: #000;
 }
 
 .main-content {
