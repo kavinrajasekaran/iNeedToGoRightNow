@@ -22,8 +22,8 @@ const GOOGLE_MAPS_API_KEY = 'AIzaSyAz6i67o6smdKsuGkT7ZhwJY0EcI5pgjPk';
 const MIN_ZOOM_LEVEL = 14;
 
 // Thresholds set for minimal API usage
-const MIN_DISTANCE_THRESHOLD = 500;
-const SEARCH_RADIUS = 1000;
+const MIN_DISTANCE_THRESHOLD = 250;
+const SEARCH_RADIUS = 1500;
 
 // Default Location (San Francisco Bay Area)
 const DEFAULT_LOCATION = { lat: 37.7749, lng: -122.4194 };
@@ -215,16 +215,38 @@ function searchBathrooms() {
         return;
     }
 
-    const request = {
-        location: map.getCenter(),
-        radius: SEARCH_RADIUS,
-        type: 'establishment',
-        keyword: 'bathroom'
+    const searches = [
+        { type: "restaurant"},
+        { type: "establishment"}
+    ];
+
+    const resultsArray = [];
+    let pendingRequests = searches.length;
+
+    const handleResponse = (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+            resultsArray.push(...results);
+        }
+        pendingRequests--;
+
+        if (pendingRequests === 0) {
+            // Combine and handle all results after all requests are complete
+            const uniqueResults = Array.from(new Map(resultsArray.map(item => [item.place_id, item])).values());
+            callback(uniqueResults, google.maps.places.PlacesServiceStatus.OK);
+        }
     };
 
-    service = new google.maps.places.PlacesService(map);
-    service.nearbySearch(request, (results, status, paginationObj) => {
-        callback(results, status, paginationObj);
+    // Loop through each search type and keyword
+    searches.forEach(search => {
+        const request = {
+            location: map.getCenter(),
+            radius: SEARCH_RADIUS,
+            type: search.type,
+            keyword: search.keyword
+        };
+
+        const service = new google.maps.places.PlacesService(map);
+        service.nearbySearch(request, handleResponse);
     });
 }
 
