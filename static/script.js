@@ -623,20 +623,20 @@ function submitCode(placeId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Update the codeCache with the new code
-            codeCache.set(placeId, code);
+            // Update the codeCache with the new best code
+            updateTopCode(placeId).then(updatedCode => {
+                // Update the info window if it's open for this marker
+                if (currentInfoWindow && currentOpenMarker && currentOpenMarker.place_id === placeId) {
+                    const content = infoWindowText(currentOpenMarker, updatedCode);
+                    infowindow.setContent(content);
+                }
+            });
 
             // Reload the side view to show the new code
             openBathroomSideView(currentOpenMarker.title, currentOpenMarker.vicinity, currentOpenMarker.rating, currentOpenMarker.place_id);
 
             // Update the sidebar to reflect the new code
             updateSidebar();
-
-            // Update the info window if it's open for this marker
-            if (currentInfoWindow && currentOpenMarker && currentOpenMarker.place_id === placeId) {
-                const content = infoWindowText(currentOpenMarker, code);
-                infowindow.setContent(content);
-            }
 
         } else {
             alert(data.message);
@@ -687,17 +687,15 @@ function deleteCode(codeId) {
                 codeElement.remove();
             }
 
-            // Update the codeCache if necessary
-            // Optionally, you might want to fetch the latest code again
-            // For simplicity, we'll set it to "Unknown" here
+            // Update the code if necessary
             const placeId = currentOpenMarker.place_id;
-            codeCache.set(placeId, "Unknown");
-
-            // Update the info window if it's open for this marker
-            if (currentInfoWindow && currentOpenMarker && currentOpenMarker.place_id === placeId) {
-                const content = infoWindowText(currentOpenMarker, "Unknown");
-                infowindow.setContent(content);
-            }
+            updateTopCode(placeId).then(updatedCode => {
+                // Update the info window if it's open for this marker
+                if (currentInfoWindow && currentOpenMarker && currentOpenMarker.place_id === placeId) {
+                    const content = infoWindowText(currentOpenMarker, updatedCode);
+                    infowindow.setContent(content);
+                }
+            });
 
             // Update the sidebar to reflect the deletion
             updateSidebar();
@@ -743,6 +741,17 @@ function voteOnCode(codeId, voteType) {
                     upvoteButton.classList.remove('voted');
                     downvoteButton.classList.remove('voted');
                 }
+
+                // Update likely code display
+                if (currentInfoWindow && currentOpenMarker) {
+                    updateTopCode(currentOpenMarker.place_id).then(updatedCode => {
+                        // Update the info window if it's open for this marker
+                        if (currentInfoWindow && currentOpenMarker) {
+                            const content = infoWindowText(currentOpenMarker, updatedCode);
+                            infowindow.setContent(content);
+                        }
+                    });
+                }
             }
         } else {
             alert(data.message);
@@ -766,4 +775,32 @@ function sanitizeString(input) {
     return truncatedInput.replace(/[&<>"'/]/g, function(char) {
         return map[char];
     });
+}
+
+async function updateTopCode(placeId) {
+    try {
+        // Fetch the latest top code from the server for the given placeId
+        const response = await fetch(`/get_top_code/${placeId}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch top code: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Extract the code from the response, defaulting to "Unknown" if not present
+        const updatedCode = data.code || "Unknown";
+        
+        // Update the codeCache with the new code
+        codeCache.set(placeId, updatedCode);
+        
+        return updatedCode;
+    } catch (error) {
+        console.error(`Error updating top code for placeId ${placeId}:`, error);
+        
+        // Optionally set the code to "Unknown" in case of an error
+        codeCache.set(placeId, "Unknown");
+        
+        return "Unknown";
+    }
 }

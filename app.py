@@ -282,7 +282,7 @@ def delete_code():
 @app.route('/vote_code', methods=['POST'])
 def vote_code():
     if 'username' not in session:
-        return jsonify({'success': False, 'message': 'User not logged in.'}), 401
+        return jsonify({'success': False, 'message': 'You need to log in to vote on bathroom codes.'}), 401
 
     data = request.get_json()
     code_id = data.get('code_id')
